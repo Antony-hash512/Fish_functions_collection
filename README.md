@@ -16,7 +16,7 @@ An English-only stable branch is planned for the future.
 ### Using Fisher
 
 > ⚠️ **Warning:**
-> If you already have custom fish functions in your local config, installing via Fisher **may overwrite files with matching names**.
+> If you already have custom fish functions in your local config (`~/.config/fish/functions/`), installing via Fisher **may overwrite files with matching names**.
 >
 > * **Check for conflicts:** Ensure your existing functions do not share names with the functions in this repository.
 > * **Manual approach:** If you are unsure, it is recommended to copy only the specific files you need manually (see below).
