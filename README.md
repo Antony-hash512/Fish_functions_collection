@@ -34,7 +34,7 @@ Clone the repository and copy functions to `~/.config/fish/functions/`.
 >
 > If you are working remotely (SSH) or prefer the terminal, use **`vimdiff`** (or `nvim -d`). You can also use **Midnight Commander** (`mc`) with its Compare Directories (`C-x d`) or Compare Files (`C-x C-d`) hotkeys to view differences side-by-side and interactively merge changes.
 >
-> This allows you to visually inspect differences and safely transfer entire files or merge specific parts of the code without overwriting your existing work.
+> This allows you to visually inspect differences and safely transfer entire files or merge specific parts of the code without blindly overwriting your existing configuration.
 
 ## Functions Overview
 
