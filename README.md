@@ -1,6 +1,6 @@
 # Fish Functions Collection
 
-This repository contains a collection of custom functions for the **Fish shell**. 
+This repository contains a collection of custom functions for the [**Fish shell**](https://github.com/fish-shell/fish-shell). 
 These scripts are designed to automate daily tasks, manage system configurations, handle file operations, and improve the overall terminal experience.
 
 Many functions include interactive elements, color-coded output, and safety checks.
