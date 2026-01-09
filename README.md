@@ -30,9 +30,11 @@ fisher install Antony-hash512/Fish_functions_collection
 Clone the repository and copy functions to `~/.config/fish/functions/`.
 
 > **💡 Pro Tip:**
-> For granular control, use a visual diff tool (like **Meld** or **KDiff3**) to compare the cloned `functions/` directory with your local `~/.config/fish/functions/`.
+> For granular control, use a visual diff tool (like **Meld** or **KDiff3**) to compare the cloned `functions/` directory against your local `~/.config/fish/functions/` and inspect individual files.
 >
-> If you are working remotely (SSH) or prefer the terminal, use **`vimdiff`** (or `nvim -d`) or the (C-x d)/(C-x C-d) hotkeys in **mc** to view differences side-by-side and interactively merge changes.
+> If you are working remotely (SSH) or prefer the terminal, use **`vimdiff`** (or `nvim -d`). You can also use **Midnight Commander** (`mc`) with its Compare Directories (`C-x d`) or Compare Files (`C-x C-d`) hotkeys to view differences side-by-side and interactively merge changes.
+>
+> This allows you to visually inspect differences and safely transfer entire files or merge specific parts of the code without overwriting your existing work.
 
 ## Functions Overview
 
