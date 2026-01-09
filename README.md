@@ -5,6 +5,13 @@ These scripts are designed to automate daily tasks, manage system configurations
 
 Many functions include interactive elements, color-coded output, and safety checks.
 
+## Development Status & Localization
+
+This is the active development branch (bleeding edge). New features land here first, which may result in a mix of English and Russian in code comments and output.
+
+An English-only stable branch is planned for the future.
+
+
 ## Functions Overview
 
 | Function Name | Description | Possible Keys / Arguments | Language (Comments/Desc) |
