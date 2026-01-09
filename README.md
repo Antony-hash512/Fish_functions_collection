@@ -17,10 +17,10 @@ An English-only stable branch is planned for the future.
 
 > ⚠️ **Warning:**
 > If you already have custom fish functions in your local config (`~/.config/fish/functions/`), installing via Fisher **may overwrite files with matching names**.
->
-> * **Check for conflicts:** Ensure your existing functions do not share names with the functions in this repository.
-> * **Manual approach:** If you are unsure, it is recommended to copy only the specific files you need manually (see below).
-> * **Conflict resolution:** You can use the `frename` utility included in this collection to easily rename functions if you need to resolve naming collisions.
+
+* **Check for conflicts:** Ensure your existing functions do not share names with the functions in this repository.
+* **Manual approach:** If you are unsure, it is recommended to copy only the specific files you need manually (see below).
+* **Conflict resolution:** You can use the `frename` utility included in this collection to easily rename functions if you need to resolve naming collisions.
 
 ```fish
 fisher install Antony-hash512/Fish_functions_collection
