@@ -11,6 +11,23 @@ This is the active development branch (bleeding edge). New features land here fi
 
 An English-only stable branch is planned for the future.
 
+## Installation
+
+### Using Fisher
+
+> ⚠️ **Warning:**
+> If you already have custom fish functions in your local config, installing via Fisher **may overwrite files with matching names**.
+>
+> * **Check for conflicts:** Ensure your existing functions do not share names with the functions in this repository.
+> * **Manual approach:** If you are unsure, it is recommended to copy only the specific files you need manually (see below).
+> * **Conflict resolution:** You can use the `frename` utility included in this collection to easily rename functions if you need to resolve naming collisions.
+
+```fish
+fisher install Antony-hash512/Fish_functions_collection
+```
+### Manual
+
+Clone the repository and copy functions to `~/.config/fish/functions/`.
 
 ## Functions Overview
 
