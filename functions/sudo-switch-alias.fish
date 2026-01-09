@@ -1,4 +1,4 @@
-function sudo-switch-alias
+function sudo-switch-alias --description "Переключение между sudo и sudo-rs с алиасом sudo"
     if test "$__sudo_using_rs" = "1"
         set -U __sudo_using_rs 0
         functions -e sudo

@@ -1,4 +1,4 @@
-function find_hardlinks
+function find_hardlinks --description "Находит все общие хардлинки с данным файлом (поиск начинается с ~, можно поменять через ключ -d)."
     # Парсинг аргументов:
     # 'd/dir=' означает, что флаг -d (или --dir) требует значения
     argparse 'd/dir=' -- $argv

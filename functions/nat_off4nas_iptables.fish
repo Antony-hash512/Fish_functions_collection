@@ -1,4 +1,4 @@
-function nat_off4nas_iptables
+function nat_off4nas_iptables --description "Отключение NAT и очистка правил iptables для раздачи интернета"
     echo "=== Отключение NAT и очистка правил ==="
 
     # 1. Выключаем IP Forwarding

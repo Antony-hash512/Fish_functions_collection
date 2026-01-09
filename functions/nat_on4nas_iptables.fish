@@ -1,4 +1,4 @@
-function nat_on4nas_iptables
+function nat_on4nas_iptables --description "Настройка временного NAT (Раздача интернета) например для NAS с помощью iptables"
     echo "=== Настройка временного NAT (Раздача интернета) ==="
     
     # 1. Получаем список интерфейсов для подсказки

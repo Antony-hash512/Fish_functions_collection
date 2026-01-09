@@ -1,4 +1,4 @@
-function fish_greeting
+function fish_greeting --description 'No display a greeting message when fish starts'
     if not set -q fish_greeting
 		#set -l line1 (_ 'Welcome to fish, the friendly interactive shell')
 		#set -l line2 \n(printf (_ 'Type %shelp%s for instructions on how to use fish') (set_color green) (set_color normal))
