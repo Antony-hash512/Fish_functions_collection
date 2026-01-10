@@ -36,6 +36,9 @@ Clone the repository and copy functions to `~/.config/fish/functions/`.
 >
 > This allows you to visually inspect differences and safely transfer entire files or merge specific parts of the code without blindly overwriting your existing configuration.
 
+## Last update
+ - cpr
+
 ## Functions Overview
 
 | Function Name | Description | Possible Keys / Arguments | Language (Comments/Desc) |
@@ -64,3 +67,6 @@ Clone the repository and copy functions to `~/.config/fish/functions/`.
 | **update-grub** | Shortcut to update GRUB2 configuration (Ubuntu-style style command for Arch). | N/A | Interface: N/A, Decription/source code comments:   Russian |
 | **which-versions** | Show all installed paths and versions for a specific program. | `<command>` |  Russian |
 | **yt-dlp-transcript** | Download subtitles/transcripts from YouTube using `yt-dlp`. | `[url]`, `--lang`, `--vtt`, `--text` |  Russian |
+
+
+
