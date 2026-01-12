@@ -1,4 +1,4 @@
-function aurclean --description "Очистка кэша paru (оставляет 2 последние версии)"
+function paru_clean --description "Очистка кэша paru (оставляет 2 последние версии)"
     # Проверка зависимостей
     if not type -q paccache
         set_color red
