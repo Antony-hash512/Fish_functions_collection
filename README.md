@@ -38,6 +38,7 @@ Clone the repository and copy functions to `~/.config/fish/functions/`.
 
 ## Last update
  - cpr
+ - aurclean
 
 ## Functions Overview
 
