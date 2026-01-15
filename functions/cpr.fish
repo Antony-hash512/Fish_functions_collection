@@ -1,6 +1,6 @@
 function cpr --description 'Copy with reflink=always'
     # 1. Парсим аргументы (h/help - флаг справки)
-    argparse 'h/help' -- $argv
+    argparse --ignore-unknown 'h/help' -- $argv
     or return
 
     # 2. Если нажали --help, выводим инструкцию и выходим
@@ -11,6 +11,7 @@ function cpr --description 'Copy with reflink=always'
         echo "ОПИСАНИЕ:"
         echo "  Копирует файлы, используя reflink (CoW) всегда."
         echo "  Работает мгновенно на Btrfs/XFS/ZFS."
+        echo "можно использовать стандартные опции cp, например -r для рекурсивного копирования."
         return 0
     end
 
