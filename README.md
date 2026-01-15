@@ -69,5 +69,6 @@ Clone the repository and copy functions to `~/.config/fish/functions/`.
 | **which-versions** | Show all installed paths and versions for a specific program. | `<command>` |  Russian |
 | **yt-dlp-transcript** | Download subtitles/transcripts from YouTube using `yt-dlp`. | `[url]`, `--lang`, `--vtt`, `--text` |  Russian |
 
-
+# Other vesions:
+- For Synology NAS: https://github.com/Antony-hash512/Fish_functions_collection_for_DSM 
 
