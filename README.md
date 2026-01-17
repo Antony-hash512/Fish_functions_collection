@@ -39,6 +39,8 @@ Clone the repository and copy functions to `~/.config/fish/functions/`.
 ## Last update
  - cpr
  - aurclean
+ - get_root_cmd
+ - mount-remote-dir-by-smb
 
 ## Functions Overview
 
