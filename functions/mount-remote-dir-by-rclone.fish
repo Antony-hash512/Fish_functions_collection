@@ -154,9 +154,14 @@ function mount-remote-dir-by-rclone
                         read -P "> " auth_choice
                         
                         if test "$auth_choice" = "2"; or test "$auth_choice" = "SSH Key"; or test "$auth_choice" = "key"
-                            read -P "Путь к приватному ключу [~/.ssh/id_rsa]: " kpath
+                            if test -d "$HOME/.ssh"
+                                echo "Ваши ключи в ~/.ssh:"
+                                ls -C --color=auto "$HOME/.ssh"
+                            end
+
+                            read -P "Путь к приватному ключу [~/.ssh/id_ed25519]: " kpath
                             if test -z "$kpath"
-                                set kpath "$HOME/.ssh/id_rsa"
+                                set kpath "$HOME/.ssh/id_ed25519"
                             end
                             # Разворачиваем тильду если есть, так как rclone может не понять
                             set kpath (eval echo $kpath)
