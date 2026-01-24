@@ -228,8 +228,21 @@ function mount-remote-dir-by-rclone
                         set -x RCLONE_CONFIG_{$remote_name}_VENDOR "$vendor"
                     end
                 else
-                    # Для sftp, ftp и других host передается как host
-                    set -x RCLONE_CONFIG_{$remote_name}_HOST "$host"
+                    # Для sftp, ftp и других host передается как host, а порт отдельно
+                    set -l target_host "$host"
+                    set -l target_port ""
+
+                    # Пытаемся извлечь порт из конца строки (формат host:port)
+                    set -l matches (string match -r '^(.*):([0-9]+)$' -- "$host")
+                    if test (count $matches) -eq 3
+                        set target_host $matches[2]
+                        set target_port $matches[3]
+                    end
+
+                    set -x RCLONE_CONFIG_{$remote_name}_HOST "$target_host"
+                    if test -n "$target_port"
+                        set -x RCLONE_CONFIG_{$remote_name}_PORT "$target_port"
+                    end
                 end
 
                 # 4. Параметры запуска
