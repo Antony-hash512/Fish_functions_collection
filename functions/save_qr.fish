@@ -1,4 +1,4 @@
-function save_qr
+function save_qr --description "Generate a QR code and save it to a PNG file (uses qrencode)"
     # Проверяем аргументы. Нужно минимум два: имя файла и текст.
     if test (count $argv) -lt 2
         echo "Использование: save_qr <имя_файла_без_расширения> '<текст или ссылка>'"

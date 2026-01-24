@@ -1,4 +1,4 @@
-function mount-remote-dir-by-rclone
+function mount-remote-dir-by-rclone --description "Mount remote directories using rclone (up/down/list/forget)"
     # Зависимость: rclone
     if not type -q rclone
         echo "Ошибка: Не найден 'rclone'. Установите: sudo pacman -S rclone"

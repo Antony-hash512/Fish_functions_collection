@@ -1,4 +1,4 @@
-function mount-remote-dir-by-webdav
+function mount-remote-dir-by-webdav --description "Mount remote WebDAV directories (davfs2) (up/down/list/forget)"
 
     # Ошибка Resource temporarily unavailable при работе с davfs2 — это классическая проблема, особенно в связке с Synology NAS.
     # Причина: davfs2 по умолчанию пытается заблокировать (lock) файл на сервере перед тем, как открыть его, чтобы предотвратить одновременное редактирование. Synology WebDAV часто некорректно обрабатывает эти блокировки или конфликтует с ними, из-за чего файловая система говорит "ресурс занят/недоступен".

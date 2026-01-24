@@ -1,4 +1,4 @@
-function mount-remote-dir-by-smb
+function mount-remote-dir-by-smb --description "Mount remote SMB/CIFS shares (up/down/list/forget)"
 	#TODO: ключ для автомонтирования через systemd (если есть) с предупреждением, что пароль будет висеть в оперативке.
 	#в субкоманде "list" добавить отображение статуса (смонтировано/не смонтировано).
     #ключ или сабкоманда для "размонтировать всё"

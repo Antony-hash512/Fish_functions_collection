@@ -1,4 +1,4 @@
-function show_qr
+function show_qr --description "Display a QR code directly in the terminal (ANSI UTF8)"
     # Проверяем, передан ли аргумент
     if test (count $argv) -eq 0
         echo "Ошибка: укажите текст или ссылку для генерации QR-кода."
