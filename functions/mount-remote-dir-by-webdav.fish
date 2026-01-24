@@ -185,13 +185,17 @@ function mount-remote-dir-by-webdav
                 # Опции uid/gid важны, чтобы пользователь мог писать в папку davfs
                 set -l mount_opts "uid=$uid,gid=$gid,$opts"
 
-                # ВАЖНО: Обновляем sudo-токен заранее, чтобы запрос пароля root
-                # не сломал pipe с передачей пароля webdav
+                # ВАЖНО: Обновляем sudo-токен заранее
                 $root_cmd -v
 
                 # ВАЖНО: davfs2 берет пароль из stdin.
-                # Посылаем: Пароль + перевод строки + "y" (для сертификата) + перевод строки
-                printf "%s\ny\n" "$password" | $root_cmd mount -t davfs -o "$mount_opts" "$full_url" "$lpath"
+                # Используем блок с задержкой, чтобы отправить 'y' только ПОСЛЕ того,
+                # как davfs2 (возможно) сбросит буфер ввода перед запросом сертификата.
+                begin
+                    printf "%s\n" "$password"
+                    sleep 2
+                    echo "y"
+                end | $root_cmd mount -t davfs -o "$mount_opts" "$full_url" "$lpath"
 
                 if test $status -eq 0
                     echo "✅ Успешно!"
