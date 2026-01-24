@@ -304,7 +304,12 @@ function mount-remote-dir-by-rclone
                 end
 
                 # 4. Параметры запуска
-                set -l base_args "--daemon" "--vfs-cache-mode" "full"
+                #set -l base_args "--daemon" "--vfs-cache-mode" "full"
+                # Оптимизация для высокого пинга:
+                # --buffer-size 256M: держит в RAM до 256МБ данных (помогает сгладить лаги)
+                # --vfs-read-chunk-size 32M: читает диск кусками по 32МБ (меньше запросов к серверу)
+                # --vfs-read-chunk-size-limit off: позволяет чанку расти до бесконечности
+                set -l base_args "--daemon" "--vfs-cache-mode" "full" "--buffer-size" "256M" "--vfs-read-chunk-size" "32M" "--vfs-read-chunk-size-limit" "off"
                 
                 # Фильтруем opts, чтобы убрать наши служебные поля (type, user, vendor)
                 # и оставить только реальные флаги rclone, если они там были
