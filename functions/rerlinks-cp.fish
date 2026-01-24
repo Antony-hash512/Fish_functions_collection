@@ -1,4 +1,4 @@
-function cpr --description 'Copy with reflink=always (btrfs is needed)'
+function rerlinks-cp --description 'Copy with reflink=always (btrfs is needed)'
     # 1. Парсим аргументы (h/help - флаг справки)
     argparse --ignore-unknown 'h/help' -- $argv
     or return
@@ -6,7 +6,7 @@ function cpr --description 'Copy with reflink=always (btrfs is needed)'
     # 2. Если нажали --help, выводим инструкцию и выходим
     if set -q _flag_help
         echo "ИСПОЛЬЗОВАНИЕ:"
-        echo "  cpr [SOURCE] [DEST]"
+        echo "  rerlinks-cp [SOURCE] [DEST]"
         echo ""
         echo "ОПИСАНИЕ:"
         echo "  Копирует файлы, используя reflink (CoW) всегда."

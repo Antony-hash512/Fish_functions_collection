@@ -1,9 +1,9 @@
-function smv --description "Smart Move: умное перемещение файлов с обработкой дубликатов и конфликтов имен"
+function smart-mv --description "Smart Move: умное перемещение файлов с обработкой дубликатов и конфликтов имен"
     # Настройки
     set -l MAX_NAME_LEN 250
 
     if test (count $argv) -lt 2
-        echo "Использование: smv файл1 [файл2 ...] каталог_назначения"
+        echo "Использование: smart-mv файл1 [файл2 ...] каталог_назначения"
         return 1
     end
 

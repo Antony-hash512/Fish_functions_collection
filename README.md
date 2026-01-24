@@ -40,7 +40,7 @@ Clone the repository and copy functions to `~/.config/fish/functions/`.
 
 | Function Name | Description | Possible Keys / Arguments | Dependencies | Language (Comments/Desc) |
 | :--- | :--- | :--- | :--- | :--- |
-| **cpr** | Copy with `reflink=always` (Cow) (wrapper for `cp`). | `[source] [dest]` | N/A | Russian comments, English description |
+| **rerlinks-cp** | Copy with `reflink=always` (Cow) (wrapper for `cp`). | `[source] [dest]` | N/A | Russian comments, English description |
 | **deluge_extract** | Extract `.torrent` files from Deluge state based on a download path. | `<search_path> [dest_dir]` | `deluge` | Mixed: Russian (Interface, source code comments) /  English (description) |
 | **deluge_extract2** | Advanced extraction of `.torrent` files by Path OR by Name. | `<search_term> [dest_dir]`, `--name` (`-n`) | `deluge` | Mixed: Russian (Interface, source code comments) /  English (description) |
 | **fedit** | Find and open a fish function using `fzf` and your preferred editor. | Interactive | `fzf`, `bat` (optional) | Mixed: English (main interface) /  Russian (source code comments, description and errors) |
@@ -50,7 +50,7 @@ Clone the repository and copy functions to `~/.config/fish/functions/`.
 | **frename** | Rename a fish function (both the file and the internal function name). | `<old_name> <new_name>` | N/A | Interface: N/A, Description/Source code comments: Russian |
 | **gdisk_mount** | Mount Google Drive using `rclone` (requires existing `gdrive` config). | N/A | `rclone` | English |
 | **get_root_cmd** | Safely detect root privilege command (`sudo`, `doas`, `run0` etc.) using a whitelist. | N/A | N/A | English description, Russian comments |
-| **hcp** | Recursive hardlink copy (safe wrapper for `cp -al`). | `<source> <dest>` | N/A | Russian |
+| **hardlinks-cp** | Recursive hardlink copy (safe wrapper for `cp -al`). | `<source> <dest>` | N/A | Russian |
 | **last_pkgs** | Show the list of most recently installed packages (Arch Linux). | `[limit]` | `expac` | Russian |
 | **mancat** | Output the content of a man page directly to the terminal (no pager). | `<man_page>` | N/A | Interface: N/A, Description/Source code comments: Russian |
 | **mancopy** | Copy the content of a man page to the system clipboard. | `<man_page>` | `wl-clipboard` (Wayland) or `xsel` (X11) | Interface: N/A, Description/Source code comments: Russian |
@@ -66,7 +66,7 @@ Clone the repository and copy functions to `~/.config/fish/functions/`.
 | **save_local_torrents**| Export loaded `.torrent` files from local Deluge with human-readable names. | `[dest_dir]` | `deluge` | Mixed: Russian (Interface, source code comments) /  English (description) |
 | **save_qr** | Generate a QR code and save it to a PNG file (uses `qrencode`). | `<filename> <text>` | `qrencode` | Russian code comments, English description |
 | **show_qr** | Display a QR code directly in the terminal (ANSI UTF8). | `<text>` | `qrencode` | Russian code comments, English description |
-| **smv** | "**Smart Move**": Safely move files handling recursion, duplicates, and name conflicts. | `file1 [file2...] <dest_dir>` | `rsync` | Russian |
+| **smart-mv** | "**Smart Move**": Safely move files handling recursion, duplicates, and name conflicts. | `file1 [file2...] <dest_dir>` | `rsync` | Russian |
 | **test_ssh_speed** | Test SSH connection speed using `pv` (pipe viewer). | `<host>` | `pv`, `openssh` | Russian code comments, English description |
 | **sudo** | Wrapper for `sudo-rs` (Rust implementation) with fallback to standard sudo. | `[args...]` | `sudo-rs` (optional), `sudo` (standard) | Interface: N/A, Decription/source code comments:   Russian |
 | **sudo-switch-alias** | Toggle the `sudo` alias between the system `sudo` and `sudo-rs`. | N/A | `sudo-rs` (optional) | Russian |

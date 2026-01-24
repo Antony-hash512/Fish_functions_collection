@@ -1,9 +1,9 @@
-function hcp --description "Рекурсивное копирование хардлинками (аналог cp -al с защитой)"
+function hardlinks-cp --description "Рекурсивное копирование хардлинками (аналог cp -al с защитой)"
     # 1. Проверяем, переданы ли аргументы
     if test (count $argv) -lt 2
         set_color red
         echo "❌ Ошибка: Нужно указать источник и назначение."
-        echo "   Использование: hcp <откуда> <куда>"
+        echo "   Использование: hardlinks-cp <откуда> <куда>"
         set_color normal
         return 1
     end
