@@ -1,39 +1,16 @@
-function mount-remote-dir-by-webdav
-
-    # Ошибка Resource temporarily unavailable при работе с davfs2 — это классическая проблема, особенно в связке с Synology NAS.
-    # Причина: davfs2 по умолчанию пытается заблокировать (lock) файл на сервере перед тем, как открыть его, чтобы предотвратить одновременное редактирование. Synology WebDAV часто некорректно обрабатывает эти блокировки или конфликтует с ними, из-за чего файловая система говорит "ресурс занят/недоступен".
-    # Решение: Отключить блокировки
-    # Вам нужно сказать драйверу davfs2: "Не пытайся блокировать файлы, просто читай их".
-    # Выполните следующие шаги в терминале:
-
-    #Создайте папку для пользовательского конфига (если её нет):
-    #Code snippet
-
-    #mkdir -p ~/.davfs2
-
-    #Создайте (или дополните) файл конфигурации одной строкой: В Fish это можно сделать так:
-    #Code snippet
-
-    #echo "use_locks 0" >> ~/.davfs2/davfs2.conf
-
-    #(Если файл уже был и там есть другие настройки — эта команда просто добавит строку в конец. Если файла не было — она его создаст).
-
-    #Перемонтируйте папку: Настройки davfs2 считываются только в момент подключения.
-
-    # Зависимость: пакет davfs2
-    if not type -q mount.davfs
-        echo "Ошибка: Не найдена утилита 'mount.davfs'. Установите пакет 'davfs2' (sudo pacman -S davfs2)."
+function mount-remote-dir-by-rclone
+    # Зависимость: rclone
+    if not type -q rclone
+        echo "Ошибка: Не найден 'rclone'. Установите: sudo pacman -S rclone"
         return 1
     end
 
     # --- 0. Настройки и Права ---
     set -l global_var "mount_remote_dir_configs"
-    # Для davfs часто нужен root, так как монтирование происходит в системные папки, 
-    # либо пользователь должен быть в группе davfs2
     set -l root_cmd (functions -q get_root_cmd; and get_root_cmd; or echo "sudo")
 
     if not set -q argv[1]
-        echo "Использование: mount-remote-dir-by-webdav [up|down|list|forget]"
+        echo "Использование: mount-remote-dir-by-rclone [up|down|list|forget]"
         return 1
     end
 
@@ -41,13 +18,12 @@ function mount-remote-dir-by-webdav
 
     # --- 1. Вспомогательные функции ---
 
-    # Фильтруем конфиги только для WebDAV (префикс dav::)
-    function _get_webdav_configs --inherit-variable global_var
+    function _get_rclone_configs --inherit-variable global_var
         if not set -q $global_var
             return
         end
         for entry in $$global_var
-            if string match -q "dav::*" -- $entry
+            if string match -q "rclone::*" -- $entry
                 echo $entry
             end
         end
@@ -63,9 +39,13 @@ function mount-remote-dir-by-webdav
         set -l text_to_show
         set -l idx 1
         for line in $content
-            # Format: dav::Host::RemotePath::LocalPath::Opts
+            # Format: rclone::Host::RemotePath::LocalPath::Opts
             set -l parts (string split "::" -- $line)
-            set -a text_to_show "$idx. $parts[2]$parts[3] -> $parts[4]"
+            # Извлекаем тип и юзера из опций для красивого отображения
+            set -l opts $parts[5]
+            set -l type (string match -r "type=([^,]+)" $opts)[2]
+            
+            set -a text_to_show "$idx. [$type] $parts[2]:$parts[3] -> $parts[4]"
             set idx (math $idx + 1)
         end
         
@@ -81,16 +61,16 @@ function mount-remote-dir-by-webdav
     switch $command
         # === UP ===
         case "up"
-            set -l configs (_get_webdav_configs)
+            set -l configs (_get_rclone_configs)
             set -l selection ""
             
             if test (count $configs) -eq 0
-                echo "Конфигураций WebDAV не найдено."
+                echo "Конфигураций Rclone не найдено."
                 set selection "new"
             else
                 _print_list_nicely $configs
                 echo "------------------------------------------------"
-                echo "Введите номера (можно диапазоны '1-3', список '1 5', 'all'),"
+                echo "Введите номера (можно диапазоны, 'all'),"
                 echo "'new' для создания нового или 'none' для отмены:"
                 read -P "> " selection
             end
@@ -128,27 +108,61 @@ function mount-remote-dir-by-webdav
                 set -l lpath ""
                 set -l opts ""
                 set -l username ""
+                set -l type "webdav" # По умолчанию
                 set -l password ""
 
                 if test $is_new_entry -eq 1
                     # --- Режим WIZARD ---
-                    echo \n"--- Добавление нового WebDAV подключения ---"
-                    echo "Пример хоста: https://webdav.yandex.ru или nextcloud.mydomain.com"
-                    read -P "Хост (URL): " host
-                    read -P "Порт введите цифрами (5005=http, 5006=https): " port
+                    echo \n"--- Добавление нового Rclone подключения (On-the-fly) ---"
+                    
+                    # 1. Тип подключения
+                    read -P "Тип протокола (webdav, ftp, sftp, smb): [webdav] " input_type
+                    if test -n "$input_type"
+                        set type $input_type
+                    end
+
+                    # 2. Хост
+                    read -P "Хост (IP или домен): " host
+                    read -P "Порт (Enter для стандартного): " port
                     if test -n "$port"
                         set host "$host:$port"
                     end
-                    read -P "Удаленный путь (напр. / или /remote.php/webdav): " rpath
+                    
+                    # Для WebDAV добавляем http/https если не указано (rclone требует url)
+                    if test "$type" = "webdav"
+                        if not string match -q "*://*" -- $host
+                            # Эвристика: если порт 5005 - http, иначе https
+                            if string match -q "*:5005" -- $host
+                                set host "http://$host"
+                            else
+                                set host "https://$host"
+                            end
+                        end
+                    end
+
+                    # 3. Пути и Юзер
+                    read -P "Путь на сервере (например /deluge): " rpath
                     read -P "Локальный путь (/mnt/...): " lpath
                     read -P "Имя пользователя: " username
-                    read -P "Доп. опции (обычно пусто, но можно указать conf=...): " extra_opts
                     
-                    # Формируем строку опций, сохраняя username для кэша
-                    set opts "username=$username"
+                    # Вендор (важно для Synology WebDAV)
+                    set -l vendor_opt ""
+                    if test "$type" = "webdav"
+                        read -P "Vendor (synology, nextcloud, other): [synology] " vendor
+                        if test -z "$vendor"
+                            set vendor "synology"
+                        end
+                        set vendor_opt ",vendor=$vendor"
+                    end
+
+                    read -P "Доп. флаги rclone (Enter если пусто): " extra_opts
+                    
+                    # Сохраняем всё важное в opts
+                    set opts "type=$type,user=$username$vendor_opt"
                     if test -n "$extra_opts"
                         set opts "$opts,$extra_opts"
                     end
+
                 else
                     # --- Режим из конфига ---
                     set -l config_str $configs[$idx]
@@ -159,7 +173,8 @@ function mount-remote-dir-by-webdav
                     set lpath $parts[4]
                     set opts $parts[5]
                     
-                    set username (string match -r "username=([^,]+)" $opts)[2]
+                    set username (string match -r "user=([^,]+)" $opts)[2]
+                    set type (string match -r "type=([^,]+)" $opts)[2]
                 end
 
                 if mountpoint -q $lpath
@@ -181,67 +196,79 @@ function mount-remote-dir-by-webdav
                     set -a cache_vals $password
                 end
 
-                # --- Подготовка URL ---
-                # Если протокол не указан:
-                set -l full_url "$host"
-                if not string match -q "http*" -- $host
-                    # Если порт 5005 (Synology HTTP) -> http, иначе по умолчанию https
-                    if string match -q "*:5005" -- $host
-                        set full_url "http://$host"
-                    else
-                        set full_url "https://$host"
-                    end
-                end
-                
-                # Убираем лишние слеши при склейке
-                set full_url (string trim -r -c / -- $full_url)
-                set -l clean_rpath (string trim -l -c / -- $rpath)
-                
-                # Если rpath пустой, слеш не добавляем, иначе добавляем
-                if test -n "$clean_rpath"
-                    set full_url "$full_url/$clean_rpath"
-                end
-
                 # --- Монтирование ---
-                echo "Монтируем $full_url в $lpath..."
+                echo "Монтируем ($type) $host:$rpath в $lpath..."
                 
                 if not test -d $lpath
                     $root_cmd mkdir -p $lpath
                     $root_cmd chown (id -u):(id -g) $lpath
                 end
 
-                set -l uid (id -u)
-                set -l gid (id -g)
-                # Опции uid/gid важны, чтобы пользователь мог писать в папку davfs
-                set -l mount_opts "uid=$uid,gid=$gid,$opts"
+                # 1. Генерируем "запутанный" пароль для rclone
+                set -l obscured_pass (rclone obscure "$password")
 
-                # ВАЖНО: Обновляем sudo-токен заранее
-                $root_cmd -v
+                # 2. Формируем имя временного ремута
+                set -l remote_name "TEMP_MOUNT_$idx"
 
-                # ВАЖНО: davfs2 берет пароль из stdin.
-                # Посылаем: Пароль + перевод строки + "y" (на случай запроса сертификата)
-                printf "%s\ny\n" "$password" | $root_cmd mount -t davfs -o "$mount_opts" "$full_url" "$lpath"
+                # 3. Устанавливаем переменные окружения для конфигурации "на лету"
+                # Rclone читает переменные вида RCLONE_CONFIG_ИМЯ_ПАРАМЕТР
+                
+                # Базовые параметры
+                set -x RCLONE_CONFIG_{$remote_name}_TYPE "$type"
+                set -x RCLONE_CONFIG_{$remote_name}_USER "$username"
+                # Rclone obscure pass
+                set -x RCLONE_CONFIG_{$remote_name}_PASS "$obscured_pass"
 
-                if test $status -eq 0
+                # Специфичные параметры URL/Host
+                if test "$type" = "webdav"
+                    set -x RCLONE_CONFIG_{$remote_name}_URL "$host"
+                    # Достаем vendor из opts
+                    set -l vendor (string match -r "vendor=([^,]+)" $opts)[2]
+                    if test -n "$vendor"
+                        set -x RCLONE_CONFIG_{$remote_name}_VENDOR "$vendor"
+                    end
+                else
+                    # Для sftp, ftp и других host передается как host
+                    set -x RCLONE_CONFIG_{$remote_name}_HOST "$host"
+                end
+
+                # 4. Параметры запуска
+                set -l base_args "--daemon" "--vfs-cache-mode" "full"
+                
+                # Фильтруем opts, чтобы убрать наши служебные поля (type, user, vendor)
+                # и оставить только реальные флаги rclone, если они там были
+                # (в текущей реализации extra_opts попадает в хвост, можно просто добавить их)
+
+                # Запуск
+                # Используем временное имя ремута и путь
+                rclone mount "$remote_name:$rpath" "$lpath" $base_args
+
+                sleep 2 
+
+                # Очищаем переменные (на всякий случай, хотя set -l и так локальные, 
+                # но set -x делает их экспортируемыми для дочерних процессов)
+                set -e RCLONE_CONFIG_{$remote_name}_TYPE
+                set -e RCLONE_CONFIG_{$remote_name}_PASS
+                # ... остальные очистятся сами при выходе из функции
+
+                if mountpoint -q $lpath
                     echo "✅ Успешно!"
                     if test $is_new_entry -eq 1
-                        # Сохраняем с префиксом dav::
-                        set -l new_record "dav::$host::$rpath::$lpath::$opts"
+                        # Сохраняем в нашем формате
+                        set -l new_record "rclone::$host::$rpath::$lpath::$opts"
                         set -Ua $global_var $new_record
                         echo "📝 Запись сохранена."
                     end
                 else
-                    echo "❌ Ошибка монтирования!"
-                    if test -n "$cached_idx"
-                        set -e cache_keys[$cached_idx]
-                        set -e cache_vals[$cached_idx]
-                    end
+                    echo "❌ Ошибка монтирования!" 
+                    # Для отладки можно раскомментировать:
+                    # echo "Debug: Type=$type URL=$host User=$username"
                 end
             end
 
         # === DOWN ===
         case "down"
-            set -l configs (_get_webdav_configs)
+            set -l configs (_get_rclone_configs)
             set -l active_mounts
             set -l display_list
             
@@ -250,12 +277,13 @@ function mount-remote-dir-by-webdav
                 set -l lpath $parts[4]
                 if mountpoint -q $lpath
                     set -a active_mounts $entry
-                    set -a display_list "$parts[2] -> $lpath"
+                    set -l host $parts[2]
+                    set -a display_list "$host -> $lpath"
                 end
             end
 
             if test (count $active_mounts) -eq 0
-                echo "Нет активных WebDAV-монтирований из вашего списка."
+                echo "Нет активных Rclone-монтирований из вашего списка."
                 return 0
             end
 
@@ -292,7 +320,11 @@ function mount-remote-dir-by-webdav
                 set -l lpath $parts[4]
                 
                 echo "Размонтирование $lpath..."
-                $root_cmd umount $lpath
+                if type -q fusermount
+                    fusermount -u $lpath
+                else
+                    $root_cmd umount $lpath
+                end
                 
                 if test $status -eq 0
                      rmdir $lpath 2>/dev/null
@@ -302,9 +334,9 @@ function mount-remote-dir-by-webdav
                 end
             end
 
-        # === LIST ===
+        # === LIST / FORGET (Аналогично другим скриптам) ===
         case "list"
-             set -l configs (_get_webdav_configs)
+             set -l configs (_get_rclone_configs)
              _print_list_nicely $configs
 
         case "list-all"
@@ -314,9 +346,8 @@ function mount-remote-dir-by-webdav
                  echo "Переменная пуста."
              end
 
-        # === FORGET ===
         case "forget"
-            set -l configs (_get_webdav_configs)
+            set -l configs (_get_rclone_configs)
             if test (count $configs) -eq 0
                 echo "Список пуст."
                 return
@@ -330,7 +361,7 @@ function mount-remote-dir-by-webdav
                 return
             end
 
-            echo "⚠️  ВНИМАНИЕ: Выбранные записи WebDAV будут удалены."
+            echo "⚠️  ВНИМАНИЕ: Записи будут удалены."
             echo "Введите 'DELETE' для подтверждения:"
             read -P "> " confirm
             
