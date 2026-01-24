@@ -114,6 +114,10 @@ function mount-remote-dir-by-webdav
                     echo \n"--- Добавление нового WebDAV подключения ---"
                     echo "Пример хоста: https://webdav.yandex.ru или nextcloud.mydomain.com"
                     read -P "Хост (URL): " host
+                    read -P "Порт (Enter=авто, 5005=http, 5006=https): " port
+                    if test -n "$port"
+                        set host "$host:$port"
+                    end
                     read -P "Удаленный путь (напр. / или /remote.php/webdav): " rpath
                     read -P "Локальный путь (/mnt/...): " lpath
                     read -P "Имя пользователя: " username
