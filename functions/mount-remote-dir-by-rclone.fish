@@ -144,6 +144,29 @@ function mount-remote-dir-by-rclone
                     read -P "Путь на сервере (например /deluge): " rpath
                     read -P "Локальный путь (/mnt/...): " lpath
                     read -P "Имя пользователя: " username
+
+                    # SSH Key Support for SFTP
+                    set -l key_file_opt ""
+                    if test "$type" = "sftp"
+                        echo "Выберите метод аутентификации:"
+                        echo "1. Пароль (default)"
+                        echo "2. SSH Key"
+                        read -P "> " auth_choice
+                        
+                        if test "$auth_choice" = "2"; or test "$auth_choice" = "SSH Key"; or test "$auth_choice" = "key"
+                            read -P "Путь к приватному ключу [~/.ssh/id_rsa]: " kpath
+                            if test -z "$kpath"
+                                set kpath "$HOME/.ssh/id_rsa"
+                            end
+                            # Разворачиваем тильду если есть, так как rclone может не понять
+                            set kpath (eval echo $kpath)
+                            
+                            if not test -f "$kpath"
+                                echo "⚠️  Предупреждение: Файл ключа '$kpath' не найден."
+                            end
+                            set key_file_opt ",key_file=$kpath"
+                        end
+                    end
                     
                     # Вендор (важно для Synology WebDAV)
                     set -l vendor_opt ""
@@ -158,7 +181,7 @@ function mount-remote-dir-by-rclone
                     read -P "Доп. флаги rclone (Enter если пусто): " extra_opts
                     
                     # Сохраняем всё важное в opts
-                    set opts "type=$type,user=$username$vendor_opt"
+                    set opts "type=$type,user=$username$vendor_opt$key_file_opt"
                     if test -n "$extra_opts"
                         set opts "$opts,$extra_opts"
                     end
@@ -182,20 +205,6 @@ function mount-remote-dir-by-rclone
                     continue
                 end
 
-                # --- Логика Пароля ---
-                set -l cache_key "$username@$host"
-                set -l cached_idx (contains -i -- $cache_key $cache_keys)
-
-                if test -n "$cached_idx"
-                    set password $cache_vals[$cached_idx]
-                    echo "Используем сохраненный пароль для $username@$host"
-                else
-                    echo "Введите пароль для $username@$host (не отображается):"
-                    read -sP "> " password
-                    set -a cache_keys $cache_key
-                    set -a cache_vals $password
-                end
-
                 # --- Монтирование ---
                 echo "Монтируем ($type) $host:$rpath в $lpath..."
                 
@@ -203,9 +212,6 @@ function mount-remote-dir-by-rclone
                     $root_cmd mkdir -p $lpath
                     $root_cmd chown (id -u):(id -g) $lpath
                 end
-
-                # 1. Генерируем "запутанный" пароль для rclone
-                set -l obscured_pass (rclone obscure "$password")
 
                 # 2. Формируем имя временного ремута
                 set -l remote_name "TEMP_MOUNT_$idx"
@@ -216,8 +222,55 @@ function mount-remote-dir-by-rclone
                 # Базовые параметры
                 set -x RCLONE_CONFIG_{$remote_name}_TYPE "$type"
                 set -x RCLONE_CONFIG_{$remote_name}_USER "$username"
-                # Rclone obscure pass
-                set -x RCLONE_CONFIG_{$remote_name}_PASS "$obscured_pass"
+
+                # Проверяем, используется ли SSH Key
+                set -l key_file_val (string match -r "key_file=([^,]+)" $opts)[2]
+
+                if test -n "$key_file_val"
+                     # --- Логика SSH Key ---
+                     set -x RCLONE_CONFIG_{$remote_name}_KEY_FILE "$key_file_val"
+                     
+                     # Кэш Passphrase для ключа
+                     set -l cache_key "key_pass::$username@$host"
+                     set -l cached_idx (contains -i -- $cache_key $cache_keys)
+                     set -l key_pass ""
+
+                     if test -n "$cached_idx"
+                         set key_pass $cache_vals[$cached_idx]
+                         echo "Используем сохраненную фразу для ключа $username@$host"
+                     else
+                         echo "Введите Passphrase для ключа (Enter если пусто):"
+                         read -sP "> " key_pass
+                         set -a cache_keys $cache_key
+                         set -a cache_vals $key_pass
+                     end
+                     
+                     if test -n "$key_pass"
+                         set -l obscured_key_pass (rclone obscure "$key_pass")
+                         set -x RCLONE_CONFIG_{$remote_name}_KEY_FILE_PASS "$obscured_key_pass"
+                     end
+                     
+                else
+                    # --- Логика Пароля (Стандартная) ---
+                    set -l cache_key "$username@$host"
+                    set -l cached_idx (contains -i -- $cache_key $cache_keys)
+
+                    if test -n "$cached_idx"
+                        set password $cache_vals[$cached_idx]
+                        echo "Используем сохраненный пароль для $username@$host"
+                    else
+                        echo "Введите пароль для $username@$host (не отображается):"
+                        read -sP "> " password
+                        set -a cache_keys $cache_key
+                        set -a cache_vals $password
+                    end
+                    
+                    # Генерируем "запутанный" пароль для rclone
+                    set -l obscured_pass (rclone obscure "$password")
+                    set -x RCLONE_CONFIG_{$remote_name}_PASS "$obscured_pass"
+                end
+
+                # Специфичные параметры URL/Host
 
                 # Специфичные параметры URL/Host
                 if test "$type" = "webdav"
@@ -262,6 +315,8 @@ function mount-remote-dir-by-rclone
                 # но set -x делает их экспортируемыми для дочерних процессов)
                 set -e RCLONE_CONFIG_{$remote_name}_TYPE
                 set -e RCLONE_CONFIG_{$remote_name}_PASS
+                set -e RCLONE_CONFIG_{$remote_name}_KEY_FILE
+                set -e RCLONE_CONFIG_{$remote_name}_KEY_FILE_PASS
                 # ... остальные очистятся сами при выходе из функции
 
                 if mountpoint -q $lpath
