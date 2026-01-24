@@ -1,4 +1,4 @@
-function cpr --description 'Copy with reflink=always'
+function cpr --description 'Copy with reflink=always (btrfs is needed)'
     # 1. Парсим аргументы (h/help - флаг справки)
     argparse --ignore-unknown 'h/help' -- $argv
     or return
