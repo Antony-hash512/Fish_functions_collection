@@ -198,13 +198,8 @@ function mount-remote-dir-by-webdav
                 $root_cmd -v
 
                 # ВАЖНО: davfs2 берет пароль из stdin.
-                # Используем блок с задержкой, чтобы отправить 'y' только ПОСЛЕ того,
-                # как davfs2 (возможно) сбросит буфер ввода перед запросом сертификата.
-                begin
-                    printf "%s\n" "$password"
-                    sleep 2
-                    echo "y"
-                end | $root_cmd mount -t davfs -o "$mount_opts" "$full_url" "$lpath"
+                # Посылаем: Пароль + перевод строки + "y" (на случай запроса сертификата)
+                printf "%s\ny\n" "$password" | $root_cmd mount -t davfs -o "$mount_opts" "$full_url" "$lpath"
 
                 if test $status -eq 0
                     echo "✅ Успешно!"
