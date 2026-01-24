@@ -161,10 +161,15 @@ function mount-remote-dir-by-webdav
                 end
 
                 # --- Подготовка URL ---
-                # Если протокол не указан, добавляем https
+                # Если протокол не указан:
                 set -l full_url "$host"
                 if not string match -q "http*" -- $host
-                    set full_url "https://$host"
+                    # Если порт 5005 (Synology HTTP) -> http, иначе по умолчанию https
+                    if string match -q "*:5005" -- $host
+                        set full_url "http://$host"
+                    else
+                        set full_url "https://$host"
+                    end
                 end
                 
                 # Убираем лишние слеши при склейке
