@@ -186,8 +186,23 @@ function squash_manager --description "Smartly manage SquashFS: create (optional
                         fish -c "$source_cmd | $decompress_cmd | $root_cmd tar2sqfs -c zstd -X level=$comp_level -b 1M --force -o /dev/mapper/$tmp_map"
                     end
                     
-                    set -l sq_status $status
-                    
+                    # Если создание squashfs прошло успешно, вычисляем размер для обрезки
+                    set -l trim_size ""
+                    if test $sq_status -eq 0
+                        if type -q unsquashfs
+                             # Получаем размер ФС в Кбайтах (пример: Filesystem size 123.45 Kbytes)
+                             set -l fs_size_kb (unsquashfs -s /dev/mapper/$tmp_map | string match -r "Filesystem size ([0-9.]+)" | xargs | string split " ")[3]
+                             
+                             # Получаем смещение Payload (в секторах)
+                             set -l offset_sectors ($root_cmd cryptsetup luksDump $output_path | awk '/Payload offset:/ {print $3}')
+                             
+                             if test -n "$fs_size_kb"; and test -n "$offset_sectors"
+                                 # (fs_size_kb * 1024) + (offset_sectors * 512) + 1MB buffer
+                                 set trim_size (math "ceil($fs_size_kb * 1024) + ($offset_sectors * 512) + 1048576")
+                             end
+                        end
+                    end
+
                     $root_cmd cryptsetup close $tmp_map
                     set map_open 0
                     
@@ -196,6 +211,15 @@ function squash_manager --description "Smartly manage SquashFS: create (optional
                         echo "Error during packing. cleaning up..."
                         rm $output_path
                         return 1
+                    end
+                    
+                    # Обрезаем лишнее место
+                    if test -n "$trim_size"
+                        set -l current_size (stat -c %s $output_path)
+                        if test $trim_size -lt $current_size
+                             echo "Optimizing container size: $(math -s1 $current_size/1024/1024)MB -> $(math -s1 $trim_size/1024/1024)MB"
+                             truncate -s (math -s0 $trim_size) $output_path
+                        end
                     end
 
                     trap - INT TERM
