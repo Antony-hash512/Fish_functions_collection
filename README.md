@@ -67,6 +67,7 @@ Clone the repository and copy functions to `~/.config/fish/functions/`.
 | **save_qr** | Generate a QR code and save it to a PNG file (uses `qrencode`). | `<filename> <text>` | `qrencode` | Russian code comments, English description |
 | **show_qr** | Display a QR code directly in the terminal (ANSI UTF8). | `<text>` | `qrencode` | Russian code comments, English description |
 | **smart-mv** | "**Smart Move**": Safely move files handling recursion, duplicates, and name conflicts. | `file1 [file2...] <dest_dir>` | `rsync` | Russian |
+| **squash_manager** | Smartly manage SquashFS: create (optional encryption), mount, and umount. | `create [OPTIONS] <input> [output], mount <img/mnt>, umount <mnt>` | `squashfs-tools`, `cryptsetup` (for -e), `tar2sqfs` (for archives) | Mixed |
 | **test_ssh_speed** | Test SSH connection speed using `pv` (pipe viewer). | `<host>` | `pv`, `openssh` | Russian code comments, English description |
 | **sudo** | Wrapper for `sudo-rs` (Rust implementation) with fallback to standard sudo. | `[args...]` | `sudo-rs` (optional), `sudo` (standard) | Interface: N/A, Decription/source code comments:   Russian |
 | **sudo-switch-alias** | Toggle the `sudo` alias between the system `sudo` and `sudo-rs`. | N/A | `sudo-rs` (optional) | Russian |
