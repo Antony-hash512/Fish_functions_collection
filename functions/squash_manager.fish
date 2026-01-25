@@ -185,7 +185,8 @@ function squash_manager --description "Smartly manage SquashFS: create (optional
                         set -l source_cmd (type -q pv; and not set -q _flag_no_progress; and echo "pv $input_path"; or echo "cat $input_path")
                         fish -c "$source_cmd | $decompress_cmd | $root_cmd tar2sqfs -c zstd -X level=$comp_level -b 1M --force -o /dev/mapper/$tmp_map"
                     end
-                    
+                    set -l sq_status $status
+
                     # Если создание squashfs прошло успешно, вычисляем размер для обрезки
                     set -l trim_size ""
                     if test $sq_status -eq 0
