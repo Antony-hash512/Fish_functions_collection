@@ -192,7 +192,7 @@ function squash_manager --description "Smartly manage SquashFS: create (optional
                     if test $sq_status -eq 0
                         if type -q unsquashfs
                              # Получаем размер ФС в Кбайтах (пример: Filesystem size 123.45 Kbytes)
-                             set -l fs_size_kb (unsquashfs -s /dev/mapper/$tmp_map | string match -r "Filesystem size ([0-9.]+)" | xargs | string split " ")[3]
+                             set -l fs_size_kb ($root_cmd unsquashfs -s /dev/mapper/$tmp_map | string match -r "Filesystem size ([0-9.]+)" | xargs | string split " ")[3]
                              
                              # Получаем смещение Payload (в секторах)
                              set -l offset_sectors ($root_cmd cryptsetup luksDump $output_path | awk '/Payload offset:/ {print $3}')
