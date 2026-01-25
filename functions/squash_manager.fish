@@ -98,7 +98,7 @@ function squash_manager --description "Smartly manage SquashFS: create (optional
             end
 
             if set -q _flag_encrypt
-                # --- ЛОГИКА С ШИФРОВАНИЕМ (FIFO) ---
+                # --- ЛОГИКА С ШИФРОВАНИЕМ ---
                 set -l raw_size (test -d $input_path; and du -sb $input_path | cut -f1; or stat -c %s $input_path)
                 set -l container_size (math -s0 "$raw_size / 1024 / 1024 + ($raw_size / 1024 / 1024 / 10) + 32")
 
@@ -109,44 +109,69 @@ function squash_manager --description "Smartly manage SquashFS: create (optional
                     return 1
                 end
 
-                echo "Preparing encrypted stream ($container_size MB)..."
-                dd if=/dev/zero of=$output_path bs=1M count=$container_size status=progress
+                set -l tmp_map "sq_v_"(random)
+                set -l map_open 0
+                set -l file_created 0
 
-                # Очистка при опечатке в YES
+                # Trap для очистки при прерывании (Ctrl+C)
+                function _sq_cleanup --inherit-variable root_cmd --inherit-variable tmp_map --inherit-variable output_path --inherit-variable map_open --inherit-variable file_created
+                    if test "$map_open" -eq 1
+                        echo "Closing container..."
+                        $root_cmd cryptsetup close $tmp_map 2>/dev/null
+                    end
+                    if test "$file_created" -eq 1; and test -f $output_path
+                        echo "Removing incomplete file $output_path..."
+                        rm $output_path
+                    end
+                end
+                trap '_sq_cleanup; exit 1' INT TERM
+
+                echo "Preparing encrypted stream ($container_size MB)..."
+                dd if=/dev/zero of=$output_path bs=1M count=$container_size status=progress 2>/dev/null
+                set file_created 1
+
+                # Форматирование LUKS
                 if not $root_cmd cryptsetup luksFormat $output_path
-                    echo "Operation aborted. Removing empty container..."
+                    echo "Operation aborted."
                     rm $output_path
                     return 1
                 end
 
-                set -l tmp_map "sq_v_"(random)
+                # Открытие контейнера
                 if $root_cmd cryptsetup open $output_path $tmp_map
-                    set -l fifo "/tmp/sq_p_"(random)
-                    mkfifo $fifo
-
-                    # Твой патч с pv и cat
-                    if type -q pv; and not set -q _flag_no_progress
-                        $root_cmd fish -c "cat $fifo | pv -peta -s $raw_size | dd of=/dev/mapper/$tmp_map bs=1M status=none" &
-                    else
-                        $root_cmd fish -c "cat $fifo | dd of=/dev/mapper/$tmp_map bs=1M status=progress" &
-                    end
-                    set -l dd_pid $last_pid
-                    sleep 1 
-
+                    set map_open 1
+                    
                     echo "Packing data (Zstd $comp_level)... This may take a while."
+                    
                     if test -d $input_path
-                        # Убрал ошибочный -f и добавил логику подавления лишнего текста
-                        mksquashfs $input_path $fifo -comp zstd -Xcompression-level $comp_level -b 1M -no-recovery -noappend
+                        # Пишем напрямую в mapper устройство (блок-девайс)
+                        # Это предотвращает "destination not block device" и проблемы с пайпами
+                        set -l mk_opts -comp zstd -Xcompression-level $comp_level -b 1M -no-recovery -noappend
+                        set -q _flag_no_progress; and set mk_opts $mk_opts -quiet; or set mk_opts $mk_opts -info
+                        
+                        mksquashfs $input_path /dev/mapper/$tmp_map $mk_opts
                     else
-                        # Для tar2sqfs флаг --force (-f) остается, он там нужен
+                        # Для архивов через tar2sqfs
+                        # tar2sqfs умеет писать в блок-девайс
                         set -l source_cmd (type -q pv; and not set -q _flag_no_progress; and echo "pv $input_path"; or echo "cat $input_path")
-                        fish -c "$source_cmd | $decompress_cmd | tar2sqfs -c zstd -X level=$comp_level -b 1M --force -o $fifo"
+                        fish -c "$source_cmd | $decompress_cmd | tar2sqfs -c zstd -X level=$comp_level -b 1M --force -o /dev/mapper/$tmp_map"
+                    end
+                    
+                    set -l sq_status $status
+                    
+                    $root_cmd cryptsetup close $tmp_map
+                    set map_open 0
+                    
+                    # Если создание squashfs упало, удаляем файл
+                    if test $sq_status -ne 0
+                        echo "Error during packing. cleaning up..."
+                        rm $output_path
+                        return 1
                     end
 
-                    wait $dd_pid
-                    $root_cmd cryptsetup close $tmp_map
-                    rm $fifo
+                    trap - INT TERM
                 else
+                    echo "Failed to open container."
                     rm $output_path
                     return 1
                 end
