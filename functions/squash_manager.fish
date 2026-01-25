@@ -195,20 +195,32 @@ function squash_manager --description "Smartly manage SquashFS: create (optional
                              set -l sq_info ($root_cmd unsquashfs -s /dev/mapper/$tmp_map 2>&1)
                              
                              # Extract bytes directly using regex with flexible spacing
-                             # string match returns (full_match, group1, group2...)
                              set -l matches (echo "$sq_info" | string match -r "Filesystem size\s+([0-9]+)\s+bytes")
                              set -l fs_size_bytes $matches[2]
                              
-                             # Получаем смещение Payload (в секторах)
-                             set -l offset_sectors ($root_cmd cryptsetup luksDump $output_path | awk '/Payload offset:/ {print $3}')
+                             # Extract Payload Offset (Handle LUKS2 bytes and LUKS1 sectors)
+                             set -l luks_dump ($root_cmd cryptsetup luksDump $output_path)
+                             set -l offset_bytes ""
                              
-                             if test -n "$fs_size_bytes"; and test -n "$offset_sectors"
-                                 # (fs_size_bytes) + (offset_sectors * 512) + 1MB buffer
-                                 set trim_size (math "ceil($fs_size_bytes) + ($offset_sectors * 512) + 1048576")
+                             # Try LUKS2 format: "offset: 16777216 [bytes]"
+                             set -l luks2_matches (echo "$luks_dump" | string match -r "offset:\s+([0-9]+)\s+\[bytes\]")
+                             if test -n "$luks2_matches[2]"
+                                 set offset_bytes $luks2_matches[2]
+                             else
+                                 # Try LUKS1 format: "Payload offset: 4096" (sectors)
+                                 set -l luks1_matches (echo "$luks_dump" | string match -r "Payload offset:\s+([0-9]+)")
+                                 if test -n "$luks1_matches[2]"
+                                     set offset_bytes (math "$luks1_matches[2] * 512")
+                                 end
+                             end
+                             
+                             if test -n "$fs_size_bytes"; and test -n "$offset_bytes"
+                                 # (fs_size_bytes) + (offset_bytes) + 1MB buffer
+                                 set trim_size (math "ceil($fs_size_bytes) + $offset_bytes + 1048576")
                              else
                                  echo "Warning: Could not determine optimal size. Skipping trim."
                                  if test -z "$fs_size_bytes"; echo "Minning fs_size_bytes. unsquashfs raw: $sq_info"; end
-                                 if test -z "$offset_sectors"; echo "Missing offset_sectors."; end
+                                 if test -z "$offset_bytes"; echo "Missing payload offset. luksDump raw: $luks_dump"; end
                              end
                         else
                              echo "Warning: unsquashfs not found, cannot optimize size."
