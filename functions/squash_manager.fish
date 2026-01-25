@@ -191,16 +191,25 @@ function squash_manager --description "Smartly manage SquashFS: create (optional
                     set -l trim_size ""
                     if test $sq_status -eq 0
                         if type -q unsquashfs
-                             # Получаем размер ФС в Кбайтах (пример: Filesystem size 123.45 Kbytes)
-                             set -l fs_size_kb ($root_cmd unsquashfs -s /dev/mapper/$tmp_map 2>/dev/null | awk '/Filesystem size/ {print $3}')
+                             # Capture output (combine stdout and stderr)
+                             set -l sq_info ($root_cmd unsquashfs -s /dev/mapper/$tmp_map 2>&1)
+                             set -l fs_size_kb (echo "$sq_info" | awk '/Filesystem size/ {print $3}')
                              
                              # Получаем смещение Payload (в секторах)
                              set -l offset_sectors ($root_cmd cryptsetup luksDump $output_path | awk '/Payload offset:/ {print $3}')
                              
+                             # Debug output
+                             # echo "Debug: Detected FS size: $fs_size_kb KB, Offset: $offset_sectors sectors"
+
                              if test -n "$fs_size_kb"; and test -n "$offset_sectors"
-                                 # (fs_size_kb * 1024) + (offset_sectors * 512) + 1MB buffer
+                                 # (fs_size_kb * 1024) + (offset_sectors * 512) + buffer
                                  set trim_size (math "ceil($fs_size_kb * 1024) + ($offset_sectors * 512) + 1048576")
+                             else
+                                 echo "Warning: Could not determine optimal size. Skipping trim."
+                                 echo "unsquashfs output: $sq_info"
                              end
+                        else
+                             echo "Warning: unsquashfs not found, cannot optimize size."
                         end
                     end
 
