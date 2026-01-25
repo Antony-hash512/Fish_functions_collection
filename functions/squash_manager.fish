@@ -35,33 +35,44 @@ function squash_manager --description "Smartly manage SquashFS: create (optional
             set -l mapper_name "sq_"(string replace -a (string escape --style=regex ".") "_" (basename $img))
             mkdir -p $mnt
 
-            set -l mount_status 1
-
             if $root_cmd cryptsetup isLuks $img 2>/dev/null
+                # Check for existing mapper
                 if test -e /dev/mapper/$mapper_name
-                    echo "Mapper device /dev/mapper/$mapper_name already exists. Using it..."
-                else
-                    echo "Opening encrypted container..."
-                    if not $root_cmd cryptsetup open $img $mapper_name
-                        echo "Error: Failed to open encrypted container."
-                        return 1
+                    echo "Mapper device exists. Attempting to mount..."
+                    if $root_cmd mount -t squashfs /dev/mapper/$mapper_name $mnt 2>/dev/null
+                        echo "Mounted at $mnt"
+                        return 0
+                    else
+                        echo "Mount failed (Stale mapper?). Closing and retrying..."
+                        $root_cmd cryptsetup close $mapper_name
                     end
                 end
-                $root_cmd mount /dev/mapper/$mapper_name $mnt
-                set mount_status $status
+
+                echo "Opening encrypted container..."
+                if not $root_cmd cryptsetup open $img $mapper_name
+                    echo "Error: Failed to open encrypted container."
+                    return 1
+                end
+
+                if $root_cmd mount -t squashfs /dev/mapper/$mapper_name $mnt
+                    echo "Mounted at $mnt"
+                    return 0
+                else
+                    echo "Error: Mount failed."
+                    $root_cmd cryptsetup close $mapper_name
+                    return 1
+                end
             else
                 echo "Mounting standard SquashFS..."
-                $root_cmd mount -o loop $img $mnt
-                set mount_status $status
+                if $root_cmd mount -t squashfs -o loop $img $mnt
+                    echo "Mounted at $mnt"
+                    return 0
+                else
+                    echo "Error: Mount failed."
+                    return 1
+                end
             end
 
-            if test $mount_status -eq 0
-                echo "Mounted at $mnt"
-                return 0
-            else
-                echo "Error: Mount failed."
-                return 1
-            end
 
         case umount
             set -l mnt $argv[2]
