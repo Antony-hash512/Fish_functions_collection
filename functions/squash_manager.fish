@@ -215,8 +215,10 @@ function squash_manager --description "Smartly manage SquashFS: create (optional
                              end
                              
                              if test -n "$fs_size_bytes"; and test -n "$offset_bytes"
-                                 # (fs_size_bytes) + (offset_bytes) + 1MB buffer
-                                 set trim_size (math "ceil($fs_size_bytes) + $offset_bytes + 1048576")
+                                 # Calculate raw size: FS + Header + 1MB buffer
+                                 set -l raw_trim_size (math "ceil($fs_size_bytes) + $offset_bytes + 1048576")
+                                 # Align to 4096 bytes (sector size safety) to avoid "device size is not multiple of sector size"
+                                 set trim_size (math "ceil($raw_trim_size / 4096) * 4096")
                              else
                                  echo "Warning: Could not determine optimal size. Skipping trim."
                                  if test -z "$fs_size_bytes"; echo "Minning fs_size_bytes. unsquashfs raw: $sq_info"; end
