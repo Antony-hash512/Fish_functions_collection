@@ -194,8 +194,10 @@ function squash_manager --description "Smartly manage SquashFS: create (optional
                              # Capture output (combine stdout and stderr)
                              set -l sq_info ($root_cmd unsquashfs -s /dev/mapper/$tmp_map 2>&1)
                              
-                             # Extract bytes directly using regex
-                             set -l fs_size_bytes (echo "$sq_info" | string match -r "Filesystem size ([0-9]+) bytes" | xargs | string split " ")[2]
+                             # Extract bytes directly using regex with flexible spacing
+                             # string match returns (full_match, group1, group2...)
+                             set -l matches (echo "$sq_info" | string match -r "Filesystem size\s+([0-9]+)\s+bytes")
+                             set -l fs_size_bytes $matches[2]
                              
                              # Получаем смещение Payload (в секторах)
                              set -l offset_sectors ($root_cmd cryptsetup luksDump $output_path | awk '/Payload offset:/ {print $3}')
@@ -205,7 +207,8 @@ function squash_manager --description "Smartly manage SquashFS: create (optional
                                  set trim_size (math "ceil($fs_size_bytes) + ($offset_sectors * 512) + 1048576")
                              else
                                  echo "Warning: Could not determine optimal size. Skipping trim."
-                                 echo "unsquashfs output: $sq_info"
+                                 if test -z "$fs_size_bytes"; echo "Minning fs_size_bytes. unsquashfs raw: $sq_info"; end
+                                 if test -z "$offset_sectors"; echo "Missing offset_sectors."; end
                              end
                         else
                              echo "Warning: unsquashfs not found, cannot optimize size."
