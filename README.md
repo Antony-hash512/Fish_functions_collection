@@ -1,9 +1,8 @@
 # See also
-## Other my dotfiles
-You can find them here: [Antony-hash512_dotfiles](https://github.com/Antony-hash512/Antony-hash512_dotfiles)
-
-## Other vesions:
-- For Synology NAS: [Fish_functions_collection_for_DSM](https://github.com/Antony-hash512/Fish_functions_collection_for_DSM) 
+ - Other my dotfiles
+   - You can find them here: [Antony-hash512_dotfiles](https://github.com/Antony-hash512/Antony-hash512_dotfiles)
+ - Other vesions:
+   - For Synology NAS: [Fish_functions_collection_for_DSM](https://github.com/Antony-hash512/Fish_functions_collection_for_DSM) 
 
 # Fish Functions Collection
 
