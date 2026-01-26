@@ -137,9 +137,9 @@ function squash_manager --description "Smartly manage SquashFS: create (optional
                 end
                 
                 # Если файл был создан (зашифрованный или обычный) - удаляем
-                if test -f $output_path
+                if test -f \"$output_path\"
                     echo 'Removing incomplete file...'
-                    rm $output_path 2>/dev/null
+                    rm \"$output_path\" 2>/dev/null
                 end
                 exit 1
             " INT TERM
@@ -158,17 +158,17 @@ function squash_manager --description "Smartly manage SquashFS: create (optional
 
 
                 echo "Preparing encrypted stream ($container_size MB)..."
-                dd if=/dev/zero of=$output_path bs=1M count=$container_size status=progress 2>/dev/null
+                dd if=/dev/zero of="$output_path" bs=1M count=$container_size status=progress 2>/dev/null
 
                 # Форматирование LUKS
-                if not $root_cmd cryptsetup luksFormat $output_path
+                if not $root_cmd cryptsetup luksFormat "$output_path"
                     echo "Operation aborted."
-                    rm $output_path
+                    rm "$output_path"
                     return 1
                 end
 
                 # Открытие контейнера
-                if $root_cmd cryptsetup open $output_path $tmp_map
+                if $root_cmd cryptsetup open "$output_path" $tmp_map
                     
                     echo "Packing data (Zstd $comp_level)... This may take a while."
                     
@@ -178,11 +178,11 @@ function squash_manager --description "Smartly manage SquashFS: create (optional
                         set -l mk_opts -comp zstd -Xcompression-level $comp_level -b 1M -no-recovery -noappend
                         set -q _flag_no_progress; and set mk_opts $mk_opts -quiet; or set mk_opts $mk_opts -info
                         
-                        $root_cmd mksquashfs $input_path /dev/mapper/$tmp_map $mk_opts
+                        $root_cmd mksquashfs "$input_path" /dev/mapper/$tmp_map $mk_opts
                     else
                         # Для архивов через tar2sqfs
                         # tar2sqfs умеет писать в блок-девайс
-                        set -l source_cmd (type -q pv; and not set -q _flag_no_progress; and echo "pv $input_path"; or echo "cat $input_path")
+                        set -l source_cmd (type -q pv; and not set -q _flag_no_progress; and echo "pv \"$input_path\""; or echo "cat \"$input_path\"")
                         fish -c "$source_cmd | $decompress_cmd | $root_cmd tar2sqfs -c zstd -X level=$comp_level -b 1M --force -o /dev/mapper/$tmp_map"
                     end
                     set -l sq_status $status
@@ -234,7 +234,7 @@ function squash_manager --description "Smartly manage SquashFS: create (optional
                     # Если создание squashfs упало, удаляем файл
                     if test $sq_status -ne 0
                         echo "Error during packing. cleaning up..."
-                        rm $output_path
+                        rm "$output_path"
                         return 1
                     end
                     
@@ -243,25 +243,25 @@ function squash_manager --description "Smartly manage SquashFS: create (optional
                         set -l current_size (stat -c %s $output_path)
                         if test $trim_size -lt $current_size
                              echo "Optimizing container size: $(math -s1 $current_size/1024/1024)MB -> $(math -s1 $trim_size/1024/1024)MB"
-                             truncate -s (math -s0 $trim_size) $output_path
+                             truncate -s (math -s0 $trim_size) "$output_path"
                         end
                     end
 
                     trap - INT TERM
                 else
                     echo "Failed to open container."
-                    rm $output_path
+                    rm "$output_path"
                     return 1
                 end
             else
                 # --- ОБЫЧНОЕ СОЗДАНИЕ ---
                 if test -d $input_path
-                    set -l mk_opts -comp zstd -Xcompression-level $comp_level -b 1M -no-recovery
-                    set -q _flag_no_progress; and set mk_opts $mk_opts -quiet; or set mk_opts $mk_opts -info
-                    mksquashfs $input_path $output_path $mk_opts
-                else
-                    set -l source_cmd (type -q pv; and not set -q _flag_no_progress; and echo "pv $input_path"; or echo "cat $input_path")
-                    fish -c "$source_cmd | $decompress_cmd | tar2sqfs -c zstd -X level=$comp_level -b 1M --force -o $output_path"
+                     set -l mk_opts -comp zstd -Xcompression-level $comp_level -b 1M -no-recovery
+                     set -q _flag_no_progress; and set mk_opts $mk_opts -quiet; or set mk_opts $mk_opts -info
+                     mksquashfs "$input_path" "$output_path" $mk_opts
+                 else
+                    set -l source_cmd (type -q pv; and not set -q _flag_no_progress; and echo "pv \"$input_path\""; or echo "cat \"$input_path\"")
+                    fish -c "$source_cmd | $decompress_cmd | tar2sqfs -c zstd -X level=$comp_level -b 1M --force -o \"$output_path\""
                 end
             end
 
