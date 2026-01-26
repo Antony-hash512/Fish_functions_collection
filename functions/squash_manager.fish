@@ -139,25 +139,22 @@ function squash_manager --description "Smartly manage SquashFS: create (optional
                 end
 
                 set -l tmp_map "sq_v_"(random)
-                set -l map_open 0
-                set -l file_created 0
 
                 # Trap для очистки при прерывании (Ctrl+C)
-                function _sq_cleanup --inherit-variable root_cmd --inherit-variable tmp_map --inherit-variable output_path --inherit-variable map_open --inherit-variable file_created
-                    if test "$map_open" -eq 1
-                        echo "Closing container..."
+                trap "
+                    if test -e /dev/mapper/$tmp_map
+                        echo 'Aborted. Closing container...'
                         $root_cmd cryptsetup close $tmp_map 2>/dev/null
                     end
-                    if test "$file_created" -eq 1; and test -f $output_path
-                        echo "Removing incomplete file $output_path..."
-                        rm $output_path
+                    if test -f $output_path
+                        echo 'Removing incomplete file...'
+                        rm $output_path 2>/dev/null
                     end
-                end
-                trap '_sq_cleanup; exit 1' INT TERM
+                    exit 1
+                " INT TERM
 
                 echo "Preparing encrypted stream ($container_size MB)..."
                 dd if=/dev/zero of=$output_path bs=1M count=$container_size status=progress 2>/dev/null
-                set file_created 1
 
                 # Форматирование LUKS
                 if not $root_cmd cryptsetup luksFormat $output_path
@@ -168,7 +165,6 @@ function squash_manager --description "Smartly manage SquashFS: create (optional
 
                 # Открытие контейнера
                 if $root_cmd cryptsetup open $output_path $tmp_map
-                    set map_open 1
                     
                     echo "Packing data (Zstd $comp_level)... This may take a while."
                     
@@ -230,7 +226,6 @@ function squash_manager --description "Smartly manage SquashFS: create (optional
                     end
 
                     $root_cmd cryptsetup close $tmp_map
-                    set map_open 0
                     
                     # Если создание squashfs упало, удаляем файл
                     if test $sq_status -ne 0
