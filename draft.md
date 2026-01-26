@@ -1,3 +1,0 @@
-
-
-fedit: fzf, bat
