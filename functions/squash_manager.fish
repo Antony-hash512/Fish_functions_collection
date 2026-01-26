@@ -126,6 +126,24 @@ function squash_manager --description "Smartly manage SquashFS: create (optional
                     case '*'; echo "Error: Unknown format"; return 1; end
             end
 
+            set -l tmp_map "sq_v_"(random)
+
+            # Trap для очистки при прерывании (Ctrl+C)
+            trap "
+                # Если это шифрованный контейнер и маппер существует - закрываем
+                if test -e /dev/mapper/$tmp_map
+                    echo 'Aborted. Closing container...'
+                    $root_cmd cryptsetup close $tmp_map 2>/dev/null
+                end
+                
+                # Если файл был создан (зашифрованный или обычный) - удаляем
+                if test -f $output_path
+                    echo 'Removing incomplete file...'
+                    rm $output_path 2>/dev/null
+                end
+                exit 1
+            " INT TERM
+
             if set -q _flag_encrypt
                 # --- ЛОГИКА С ШИФРОВАНИЕМ ---
                 set -l raw_size (test -d $input_path; and du -sb $input_path | cut -f1; or stat -c %s $input_path)
@@ -138,20 +156,6 @@ function squash_manager --description "Smartly manage SquashFS: create (optional
                     return 1
                 end
 
-                set -l tmp_map "sq_v_"(random)
-
-                # Trap для очистки при прерывании (Ctrl+C)
-                trap "
-                    if test -e /dev/mapper/$tmp_map
-                        echo 'Aborted. Closing container...'
-                        $root_cmd cryptsetup close $tmp_map 2>/dev/null
-                    end
-                    if test -f $output_path
-                        echo 'Removing incomplete file...'
-                        rm $output_path 2>/dev/null
-                    end
-                    exit 1
-                " INT TERM
 
                 echo "Preparing encrypted stream ($container_size MB)..."
                 dd if=/dev/zero of=$output_path bs=1M count=$container_size status=progress 2>/dev/null
