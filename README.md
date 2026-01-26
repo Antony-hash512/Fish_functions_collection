@@ -1,6 +1,9 @@
 # Other my dotfiles
 You can find them here: [Antony-hash512_dotfiles](https://github.com/Antony-hash512/Antony-hash512_dotfiles)
 
+# Other vesions:
+- For Synology NAS: https://github.com/Antony-hash512/Fish_functions_collection_for_DSM 
+
 # Fish Functions Collection
 
 This repository contains a collection of custom functions for the [**Fish shell**](https://github.com/fish-shell/fish-shell). 
@@ -78,6 +81,5 @@ Clone the repository and copy functions to `~/.config/fish/functions/`.
 | **which-versions** | Show all installed paths and versions for a specific program. | `<command>` | N/A | Russian |
 | **yt-dlp-transcript** | Download subtitles/transcripts from YouTube using `yt-dlp`. | `[url]`, `--lang`, `--vtt`, `--text` | `yt-dlp` | Russian |
 
-# Other vesions:
-- For Synology NAS: https://github.com/Antony-hash512/Fish_functions_collection_for_DSM 
+
 
