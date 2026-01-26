@@ -1,3 +1,6 @@
+# Other my dotfiles
+You can find them here: [Antony-hash512_dotfiles](https://github.com/Antony-hash512/Antony-hash512_dotfiles)
+
 # Fish Functions Collection
 
 This repository contains a collection of custom functions for the [**Fish shell**](https://github.com/fish-shell/fish-shell). 
