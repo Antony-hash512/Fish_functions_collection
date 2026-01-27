@@ -325,7 +325,7 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
                          
                          $rsync_cmd -av "$src_path" "$orig_path/"
                     else
-                         set -l files_inside (ls "$src_path")
+                         set -l files_inside (ls -A "$src_path")
                          if test (count $files_inside) -eq 1
                              set -l file_src "$src_path/$files_inside[1]"
                              $rsync_cmd -av "$file_src" "$orig_path"
