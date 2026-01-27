@@ -13,9 +13,9 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
         echo "  -r, --read <file>                     Read list of targets from a file"
         echo ""
         echo "Examples:"
-        echo "  zks freeze /home/user/project /tmp/backup.sqfs"
-        echo "  zks freeze -e /secret/data /tmp/secret.sqfs"
-        echo "  zks unfreeze /tmp/backup.sqfs"
+        echo "  zks freeze /home/user/project /mnt/nas/data/backup.sqfs"
+        echo "  zks freeze -e /secret/data /mnt/nas/data/secret.sqfs_luks.img"
+        echo "  zks unfreeze /mnt/nas/data/backup.sqfs"
     end
 
     if test (count $argv) -eq 0
