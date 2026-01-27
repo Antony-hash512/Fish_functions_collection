@@ -191,18 +191,18 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
             # FIX 1: Cleanup specific dir
             if test -d "$host_build_dir"
                 if test $exit_code -eq 0
-                    # On success, removed root-owned manifest to allow cleanup
-                    sudo rm -f "$host_build_dir/list.yaml"
-                    # Remove empty mountpoint skeletons (also root-owned)
-                    sudo find "$host_build_dir" -mindepth 1 -type d -empty -delete
+                    # Fix permissions so user tools can work
+                    sudo chown -R (id -un):(id -gn) "$host_build_dir"
+
+                    if functions -q rm-if-empty
+                        rm-if-empty "$host_build_dir/to_restore"
+                    end
+                    
+                    rm -f "$host_build_dir/list.yaml"
                 end
                 
-                # Safe remove attempt (will fail if still contains data, which is desired on error)
-                if functions -q rm-if-empty
-                     rm-if-empty "$host_build_dir"
-                else
-                     rmdir "$host_build_dir" 2>/dev/null
-                end
+                # Check directly with rmdir to be safe (mkdir'ом logic from user likely meant rmdir)
+                rmdir "$host_build_dir" 2>/dev/null
             end
 
             if test $exit_code -eq 0
