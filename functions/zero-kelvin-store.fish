@@ -7,6 +7,7 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
         echo "Commands:"
         echo "  freeze [targets...] [archive_path]    Offload data to a SquashFS archive"
         echo "                                        If [archive_path] is a directory, prompts for filename"
+        echo ""
         echo "  unfreeze <archive_path>               Restore data from an archive"
         echo ""
         echo "Freeze Options:"
