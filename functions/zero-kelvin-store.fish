@@ -74,12 +74,16 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
             end
 
             # Verify targets exist
+            # Verify targets exist and convert to absolute paths
+            set -l abs_targets
             for t in $targets
                 if not test -e "$t"
                     echo "Error: Target '$t' does not exist."
                     return 1
                 end
+                set -a abs_targets (realpath "$t")
             end
+            set targets $abs_targets
 
             # Check dependencies
             if not functions -q squash_manager
