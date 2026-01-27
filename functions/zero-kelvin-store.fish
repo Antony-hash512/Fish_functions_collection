@@ -563,9 +563,10 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
                     else
                         # --- Directory Verification (Recursive) ---
                         # 1. Compare structure and sizes using rsync dry-run
-                        set -l rsync_flags "-rn --size-only"
+                        # Use a list for arguments to avoid fish passing them as a single quoted string
+                        set -l rsync_flags -r -n --size-only
                         if set -q _flag_use_cmp
-                            set rsync_flags "-rcn" # -c uses checksums instead of mod-time/size
+                            set rsync_flags -r -c -n # -c uses checksums
                         end
                         
                         # We use -v to get names of differing files
@@ -578,7 +579,7 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
                         else
                             # 2. Check for "extra" files in system that are not in archive
                             # This is important for --force-delete safety
-                            set -l extra (rsync -rn --dry-run --out-format="%n" --ignore-existing "$sys_path/" "$arc_path/" | string match -v -r '^$|/$')
+                            set -l extra (rsync -r -n --dry-run --out-format="%n" --ignore-existing "$sys_path/" "$arc_path/" | string match -v -r '^$|/$')
                             if test -n "$extra"
                                 set_color yellow
                                 echo "Notice: [$sys_path] contains extra files not in archive"
@@ -600,7 +601,8 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
                     # Success Verification
                     if set -q _flag_force_delete
                         # Safety check: if it's a directory with extra files, don't delete recursively
-                        if test "$type" = "directory"; and rsync -rn --dry-run --out-format="%n" --ignore-existing "$sys_path/" "$arc_path/" | string match -v -r '^$|/$' >/dev/null
+                        # Re-run strict check for extra files before delete
+                        if test "$type" = "directory"; and rsync -r -n --dry-run --out-format="%n" --ignore-existing "$sys_path/" "$arc_path/" | string match -v -r '^$|/$' >/dev/null
                             set_color yellow
                             echo "SKIP: $sys_path has extra files, won't delete recursively."
                             set_color normal
