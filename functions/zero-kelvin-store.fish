@@ -171,16 +171,27 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
                     set -l container_dir "$restore_root/$counter"
                     mkdir -p $container_dir
 
-                    echo "  - id: $counter" >> $manifest
-                    echo "    original_path: \"$target_path\"" >> $manifest
-
+                    # Refactored Logic: Preserve basename in structure
+                    set -l t_name (basename "$target_path")
+                    set -l t_dir (dirname "$target_path")
+                    
+                    # Create the mount point inside the numeric dir
+                    # e.g. /to_restore/1/etc
                     if test -d "$target_path"
-                        mount --bind "$target_path" "$container_dir"
+                         mkdir "$container_dir/$t_name"
+                         mount --bind "$target_path" "$container_dir/$t_name"
+                    else
+                         touch "$container_dir/$t_name"
+                         mount --bind "$target_path" "$container_dir/$t_name"
+                    end
+
+                    echo "  - id: $counter" >> $manifest
+                    echo "    name: \"$t_name\"" >> $manifest
+                    echo "    restore_path: \"$t_dir\"" >> $manifest
+                    
+                    if test -d "$target_path"
                         echo "    type: directory" >> $manifest
                     else
-                        set -l fname (basename "$target_path")
-                        touch "$container_dir/$fname"
-                        mount --bind "$target_path" "$container_dir/$fname"
                         echo "    type: file" >> $manifest
                     end
                     set counter (math $counter + 1)
@@ -271,20 +282,39 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
 
             echo "📖 Reading manifest..."
             
-            # Parse manifest
+            # Parse manifest (Supports new 'name/restore_path' and legacy 'original_path')
             set -l ids
             set -l paths
+            set -l names
+            set -l restore_paths
             set -l types
+            set -l is_legacy 0
             
             set -l current_id ""
             cat $manifest | while read -l line
                 if string match -q "*id: *" -- $line
                     set current_id (string replace -r ".*id: " "" -- $line)
                     set -a ids $current_id
+                    # placeholders for safety
+                    set -a names ""
+                    set -a restore_paths ""
+                    set -a paths ""
                 else if string match -q "*original_path: *" -- $line
+                     # Legacy support
+                     set is_legacy 1
                      if test -n "$current_id"
                         set -l p (string replace -r ".*original_path: \"" "" -- $line | string replace -r "\"" "" )
-                        set -a paths $p
+                        set paths[-1] $p
+                     end
+                else if string match -q "*name: *" -- $line
+                     if test -n "$current_id"
+                        set -l n (string replace -r ".*name: \"" "" -- $line | string replace -r "\"" "" )
+                        set names[-1] $n
+                     end
+                else if string match -q "*restore_path: *" -- $line
+                     if test -n "$current_id"
+                        set -l rp (string replace -r ".*restore_path: \"" "" -- $line | string replace -r "\"" "" )
+                        set restore_paths[-1] $rp
                      end
                 else if string match -q "*type: *" -- $line
                     if test -n "$current_id"
@@ -300,8 +330,28 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
 
             for i in (seq (count $ids))
                 set -l id $ids[$i]
-                set -l orig_path $paths[$i]
                 set -l type $types[$i]
+                
+                set -l orig_path
+                set -l src_path
+                
+                # Determine paths based on manifest version
+                if test -n "$names[$i]"
+                    # New format
+                    set orig_path "$restore_paths[$i]/$names[$i]"
+                    set src_path "$mount_point/to_restore/$id/$names[$i]"
+                else
+                    # Legacy format
+                    set orig_path "$paths[$i]"
+                     # Legacy structure was flat inside $id/ or contained files
+                    if test "$type" = "directory"
+                        set src_path "$mount_point/to_restore/$id/"
+                    else
+                        # For legacy files, we need to find the file inside
+                        set -l f (ls -A "$mount_point/to_restore/$id/" | head -1)
+                        set src_path "$mount_point/to_restore/$id/$f"
+                    end
+                end
                 
                 # Check for subsequent 'all' flag
                 set -l do_restore 0
@@ -328,7 +378,7 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
                         case n N no
                             set do_restore 0
                         case '*'
-                            # Default to no? or re-ask? treating as skip (no) for simplicity
+                            # Default to no
                             set do_restore 0
                     end
                 end
@@ -338,15 +388,13 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
                     
                     set -l dest_dir (dirname "$orig_path")
                     if not test -d "$dest_dir"
-                        # Create parent dir if needed. Might need sudo.
+                        # Create parent dir if needed
                          if test -w (dirname "$dest_dir")
                             mkdir -p "$dest_dir"
                          else
                             $root_cmd mkdir -p "$dest_dir"
                          end
                     end
-                    
-                    set -l src_path "$mount_point/to_restore/$id/"
                     
                     # FIX 2: Check Permissions
                     set -l rsync_cmd "rsync"
@@ -355,24 +403,21 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
                          set rsync_cmd "$root_cmd rsync"
                     end
 
-                    if test "$type" = "directory"
-                         # ensure target exists
-                         if not test -d "$orig_path"
-                             if test -w "$dest_dir"
-                                mkdir -p "$orig_path"
-                             else
-                                $root_cmd mkdir -p "$orig_path"
-                             end
-                         end
-                         
-                         $rsync_cmd -av "$src_path" "$orig_path/"
+                    # Generic rsync for both files and dirs (works for new structure)
+                    # For legacy dirs, src ends in slash? No, we used rsync -av src/ dst/
+                    
+                    if test -n "$names[$i]"
+                         # New Format: copy unit (dir or file) into parent dir
+                         $rsync_cmd -av "$src_path" "$dest_dir/"
                     else
-                         set -l files_inside (ls -A "$src_path")
-                         if test (count $files_inside) -eq 1
-                             set -l file_src "$src_path/$files_inside[1]"
-                             $rsync_cmd -av "$file_src" "$orig_path"
+                         # Legacy Format Restoration
+                         if test "$type" = "directory"
+                             if not test -d "$orig_path"
+                                 if test -w (dirname "$orig_path"); mkdir -p "$orig_path"; else; $root_cmd mkdir -p "$orig_path"; end
+                             end
+                             $rsync_cmd -av "$src_path" "$orig_path/"
                          else
-                             echo "Warning: Ambiguous file content for ID $id. Skipping."
+                             $rsync_cmd -av "$src_path" "$orig_path"
                          end
                     end
                     
