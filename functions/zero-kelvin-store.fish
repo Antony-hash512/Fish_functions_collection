@@ -73,7 +73,6 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
                 return 1
             end
 
-            # Verify targets exist
             # Verify targets exist and convert to absolute paths
             set -l abs_targets
             for t in $targets
