@@ -13,7 +13,7 @@ function squash_manager --description "Smartly manage SquashFS: create (optional
         echo "       squash_manager umount <mount_point>"
         echo ""
         echo "Options for 'create':"
-        echo "  -e, --encrypt         Create an encrypted LUKS container (Secure FIFO stream)"
+        echo "  -e, --encrypt         Create an encrypted LUKS container"
         echo "  -c, --compression=N   Zstd compression level (default: 15)"
         echo "  --no-progress         Disable progress bar"
         echo ""
