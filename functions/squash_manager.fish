@@ -268,6 +268,8 @@ function squash_manager --description "Smartly manage SquashFS: create (optional
             if test $status -eq 0
                 set_color green; echo "Success: $output_path"; set_color normal
                 ls -lh $output_path
+            else
+                return 1
             end
 
         case '*'

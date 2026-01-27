@@ -64,6 +64,15 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
 
             set output_archive $argv[$args_count]
             
+            # Handle if output is a directory (auto-generate filename)
+            if test -d "$output_archive"
+                set -l timestamp (date +%Y-%m-%d_%H%M%S)
+                set -l new_name "zks_$timestamp.sqfs"
+                # Strip trailing slash if present then append filename
+                set output_archive (string trim -r -c / -- "$output_archive")"/$new_name"
+                echo "Notice: Output path is a directory. Saving to: $output_archive"
+            end
+            
             # If there are targets in argv, add them
             if test $args_count -gt 1
                 set -l arg_targets $argv[1..-2]
