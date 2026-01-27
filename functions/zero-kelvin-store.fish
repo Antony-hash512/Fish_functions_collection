@@ -6,6 +6,7 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
         echo ""
         echo "Commands:"
         echo "  freeze [targets...] [archive_path]    Offload data to a SquashFS archive"
+        echo "                                        If [archive_path] is a directory, prompts for filename"
         echo "  unfreeze <archive_path>               Restore data from an archive"
         echo ""
         echo "Freeze Options:"
@@ -64,13 +65,21 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
 
             set output_archive $argv[$args_count]
             
-            # Handle if output is a directory (auto-generate filename)
+            # Handle if output is a directory (interactive filename generation)
             if test -d "$output_archive"
                 set -l timestamp (date +%Y-%m-%d_%H%M%S)
-                set -l new_name "zks_$timestamp.sqfs"
+                
+                echo "Output is a directory: $output_archive"
+                read -P "Enter filename prefix (default: zks): " -l user_prefix
+                
+                if test -z "$user_prefix"
+                    set user_prefix "zks"
+                end
+                
+                set -l new_name "{$user_prefix}_{$timestamp}.sqfs"
                 # Strip trailing slash if present then append filename
                 set output_archive (string trim -r -c / -- "$output_archive")"/$new_name"
-                echo "Notice: Output path is a directory. Saving to: $output_archive"
+                echo "Saving to: $output_archive"
             end
             
             # If there are targets in argv, add them
@@ -106,7 +115,8 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
             end
 
             # Prepare for isolation
-            set -l build_uuid (random)
+            # Use timestamp + random for uniqueness to avoid collisions
+            set -l build_uuid (date +%s)"_"(random)
             # FIX 1: Generate build path in HOST to avoid race condition in cleanup
             set -l host_build_dir "/tmp/zks_build_$build_uuid"
             
