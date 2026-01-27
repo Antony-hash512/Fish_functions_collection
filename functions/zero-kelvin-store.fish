@@ -14,6 +14,10 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
         echo "  -e, --encrypt                         Encrypt the archive using LUKS (via squash_manager)"
         echo "  -r, --read <file>                     Read list of targets from a file"
         echo ""
+        echo "Check Options:"
+        echo "  --use-cmp                             Verify file content (byte-by-byte) in addition to size"
+        echo "  --force-delete                        Delete local files if they match the archive (Destructive!)"
+        echo ""
         echo "Examples:"
         echo "  zks freeze /home/user/project /mnt/nas/data/backup.sqfs"
         echo "  zks freeze -e /secret/data /mnt/nas/data/secret.sqfs_luks.img"
@@ -430,6 +434,180 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
             echo "Restoration complete. ($restore_count items processed)"
             
             squash_manager umount "$mount_point"
+
+        case check
+            argparse 'use-cmp' 'force-delete' 'h/help' -- $argv
+            if set -q _flag_help
+                _zks_help
+                return 0
+            end
+
+            if test (count $argv) -lt 1
+                echo "Error: Archive path required."
+                return 1
+            end
+            set -l archive_path $argv[1]
+
+            if not test -f "$archive_path"
+                echo "Error: Archive '$archive_path' not found."
+                return 1
+            end
+            
+            # Need get_root_cmd
+            set -l root_cmd (functions -q get_root_cmd; and get_root_cmd; or echo "sudo")
+
+            # Temporary mount point
+            set -l mount_point "/tmp/zks_chk_"(random)
+            
+            echo "🔍 Mounting archive for check..."
+            squash_manager mount "$archive_path" "$mount_point"
+            or return 1
+            
+            # Helper to ensure cleanup on exit/interrupt
+            function _zks_check_cleanup --inherit-variable mount_point
+                ifmountpoint -q "$mount_point"
+                    squash_manager umount "$mount_point" >/dev/null 2>&1
+                end
+            end
+            trap "_zks_check_cleanup" INT TERM EXIT
+
+            set -l manifest "$mount_point/list.yaml"
+            if not test -f "$manifest"
+                echo "Error: Invalid archive format (list.yaml not found)."
+                return 1
+            end
+            
+            # Parse manifest (Same logic as unfreeze for compatibility)
+            set -l ids
+            set -l paths
+            set -l names
+            set -l restore_paths
+            set -l types
+            
+            set -l current_id ""
+            cat $manifest | while read -l line
+                if string match -q "*id: *" -- $line
+                    set current_id (string replace -r ".*id: " "" -- $line)
+                    set -a ids $current_id
+                    # placeholders
+                    set -a names ""
+                    set -a restore_paths ""
+                    set -a paths ""
+                else if string match -q "*original_path: *" -- $line
+                     if test -n "$current_id"; set paths[-1] (string replace -r ".*original_path: \"" "" -- $line | string replace -r "\"" "" ); end
+                else if string match -q "*name: *" -- $line
+                     if test -n "$current_id"; set names[-1] (string replace -r ".*name: \"" "" -- $line | string replace -r "\"" "" ); end
+                else if string match -q "*restore_path: *" -- $line
+                     if test -n "$current_id"; set restore_paths[-1] (string replace -r ".*restore_path: \"" "" -- $line | string replace -r "\"" "" ); end
+                else if string match -q "*type: *" -- $line
+                    if test -n "$current_id"; set -a types (string replace -r ".*type: " "" -- $line); end
+                end
+            end
+            
+            set -l error_count 0
+            set -l deleted_count 0
+            
+            for i in (seq (count $ids))
+                set -l id $ids[$i]
+                set -l type $types[$i]
+                
+                set -l sys_path
+                set -l arc_path
+                
+                # Resolving paths
+                if test -n "$names[$i]"
+                    set sys_path "$restore_paths[$i]/$names[$i]"
+                    set arc_path "$mount_point/to_restore/$id/$names[$i]"
+                else
+                    # Legacy
+                    set sys_path "$paths[$i]"
+                    if test "$type" = "directory"
+                        set arc_path "$mount_point/to_restore/$id/"
+                    else
+                        set -l f (ls -A "$mount_point/to_restore/$id/" | head -1)
+                        set arc_path "$mount_point/to_restore/$id/$f"
+                    end
+                end
+                
+                # --- Verification ---
+                set -l check_failed 0
+                set -l reason ""
+                
+                if not test -e "$sys_path"
+                    set check_failed 1
+                    set reason "Missing in system"
+                else if not test -e "$arc_path"
+                    set check_failed 1
+                    set reason "Missing in archive"
+                else if test "$type" = "file"
+                     # Size check
+                     set -l s_sys (stat -c %s "$sys_path" 2>/dev/null)
+                     set -l s_arc (stat -c %s "$arc_path" 2>/dev/null)
+                     
+                     if test "$s_sys" != "$s_arc"
+                         set check_failed 1
+                         set reason "Size mismatch (Sys: $s_sys, Arc: $s_arc)"
+                     else if set -q _flag_use_cmp
+                         # Content check
+                         # Determine if we need sudo for reading system file
+                         set -l cmp_cmd "cmp"
+                         if not test -r "$sys_path"
+                             set cmp_cmd "$root_cmd cmp"
+                         end
+                         
+                         $cmp_cmd -s "$sys_path" "$arc_path"
+                         if test $status -ne 0
+                             set check_failed 1
+                             set reason "Content mismatch (cmp)"
+                         end
+                     end
+                end
+                
+                if test $check_failed -eq 1
+                    set_color red
+                    echo "WARNING: [$sys_path] -> $reason"
+                    set_color normal
+                    set error_count (math $error_count + 1)
+                else
+                    # Success
+                    if set -q _flag_force_delete
+                        echo "MATCH: $sys_path (Deleting...)"
+                        
+                        set -l rm_cmd "rm"
+                        if not test -w (dirname "$sys_path"); or not test -w "$sys_path"
+                            set rm_cmd "$root_cmd rm"
+                        end
+                        
+                        $rm_cmd -rf "$sys_path"
+                        if test $status -eq 0
+                            set deleted_count (math $deleted_count + 1)
+                        else
+                             set_color red; echo "  Error deleting $sys_path"; set_color normal
+                        end
+                    # else
+                       # Silent success or verbose? User didn't specify, keeping silent to avoid noise
+                    end
+                end
+            end
+            
+            echo ""
+            if test $error_count -eq 0
+                set_color green
+                echo "Check complete: All checked items match."
+                set_color normal
+                if set -q _flag_force_delete
+                    echo "Deleted $deleted_count items."
+                end
+                return 0
+            else
+                set_color red
+                echo "Check complete: Found $error_count mismatches/errors!"
+                if set -q _flag_force_delete
+                    echo "Deleted $deleted_count matched items."
+                end
+                set_color normal
+                return 1
+            end
 
         case '*'
             echo "Error: Unknown command '$command'"
