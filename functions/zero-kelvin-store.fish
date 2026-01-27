@@ -467,7 +467,7 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
             
             # Helper to ensure cleanup on exit/interrupt
             function _zks_check_cleanup --inherit-variable mount_point
-                ifmountpoint -q "$mount_point"
+                if mountpoint -q "$mount_point"
                     squash_manager umount "$mount_point" >/dev/null 2>&1
                 end
             end
