@@ -541,28 +541,54 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
                 else if not test -e "$arc_path"
                     set check_failed 1
                     set reason "Missing in archive"
-                else if test "$type" = "file"
-                     # Size check
-                     set -l s_sys (stat -c %s "$sys_path" 2>/dev/null)
-                     set -l s_arc (stat -c %s "$arc_path" 2>/dev/null)
-                     
-                     if test "$s_sys" != "$s_arc"
-                         set check_failed 1
-                         set reason "Size mismatch (Sys: $s_sys, Arc: $s_arc)"
-                     else if set -q _flag_use_cmp
-                         # Content check
-                         # Determine if we need sudo for reading system file
-                         set -l cmp_cmd "cmp"
-                         if not test -r "$sys_path"
-                             set cmp_cmd "$root_cmd cmp"
-                         end
-                         
-                         $cmp_cmd -s "$sys_path" "$arc_path"
-                         if test $status -ne 0
-                             set check_failed 1
-                             set reason "Content mismatch (cmp)"
-                         end
-                     end
+                else
+                    if test "$type" = "file"
+                        # --- File Verification ---
+                        set -l s_sys (stat -c %s "$sys_path" 2>/dev/null)
+                        set -l s_arc (stat -c %s "$arc_path" 2>/dev/null)
+                        
+                        if test "$s_sys" != "$s_arc"
+                            set check_failed 1
+                            set reason "Size mismatch (Sys: $s_sys, Arc: $s_arc)"
+                        else if set -q _flag_use_cmp
+                            set -l cmp_cmd "cmp"
+                            if not test -r "$sys_path"; set cmp_cmd "$root_cmd cmp"; end
+                            
+                            $cmp_cmd -s "$sys_path" "$arc_path"
+                            if test $status -ne 0
+                                set check_failed 1
+                                set reason "Content mismatch (cmp)"
+                            end
+                        end
+                    else
+                        # --- Directory Verification (Recursive) ---
+                        # 1. Compare structure and sizes using rsync dry-run
+                        set -l rsync_flags "-rn --size-only"
+                        if set -q _flag_use_cmp
+                            set rsync_flags "-rcn" # -c uses checksums instead of mod-time/size
+                        end
+                        
+                        # We use -v to get names of differing files
+                        # If output is non-empty (excluding header/footer), there are differences
+                        set -l diffs (rsync $rsync_flags --dry-run --out-format="%n" "$arc_path/" "$sys_path/" | string match -v -r '^$|/$')
+                        
+                        if test -n "$diffs"
+                            set check_failed 1
+                            set reason "Content/Size mismatch in files: "(string join ", " $diffs | string collect | string shorten --char 50)
+                        else
+                            # 2. Check for "extra" files in system that are not in archive
+                            # This is important for --force-delete safety
+                            set -l extra (rsync -rn --dry-run --out-format="%n" --ignore-existing "$sys_path/" "$arc_path/" | string match -v -r '^$|/$')
+                            if test -n "$extra"
+                                set_color yellow
+                                echo "Notice: [$sys_path] contains extra files not in archive"
+                                set_color normal
+                                # We don't mark as FAILED unless it's a conflict, 
+                                # but if extra files exist, we MUST NOT delete the whole dir.
+                                set -l has_extra 1
+                            end
+                        end
+                    end
                 end
                 
                 if test $check_failed -eq 1
@@ -571,23 +597,20 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
                     set_color normal
                     set error_count (math $error_count + 1)
                 else
-                    # Success
+                    # Success Verification
                     if set -q _flag_force_delete
-                        echo "MATCH: $sys_path (Deleting...)"
-                        
-                        set -l rm_cmd "rm"
-                        if not test -w (dirname "$sys_path"); or not test -w "$sys_path"
-                            set rm_cmd "$root_cmd rm"
-                        end
-                        
-                        $rm_cmd -rf "$sys_path"
-                        if test $status -eq 0
-                            set deleted_count (math $deleted_count + 1)
+                        # Safety check: if it's a directory with extra files, don't delete recursively
+                        if test "$type" = "directory"; and rsync -rn --dry-run --out-format="%n" --ignore-existing "$sys_path/" "$arc_path/" | string match -v -r '^$|/$' >/dev/null
+                            set_color yellow
+                            echo "SKIP: $sys_path has extra files, won't delete recursively."
+                            set_color normal
                         else
-                             set_color red; echo "  Error deleting $sys_path"; set_color normal
+                            echo "MATCH: $sys_path (Deleting...)"
+                            set -l rm_cmd "rm"
+                            if not test -w (dirname "$sys_path"); or not test -w "$sys_path"; set rm_cmd "$root_cmd rm"; end
+                            $rm_cmd -rf "$sys_path"
+                            if test $status -eq 0; set deleted_count (math $deleted_count + 1); else; set_color red; echo "  Error deleting $sys_path"; set_color normal; end
                         end
-                    # else
-                       # Silent success or verbose? User didn't specify, keeping silent to avoid noise
                     end
                 end
             end
