@@ -20,6 +20,8 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
     end
 
     if test (count $argv) -eq 0
+        or contains -- -h $argv
+        or contains -- --help $argv
         _zks_help
         return 0
     end
