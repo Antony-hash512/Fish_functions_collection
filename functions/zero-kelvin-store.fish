@@ -16,6 +16,7 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
         echo "  zks freeze /home/user/project /mnt/nas/data/backup.sqfs"
         echo "  zks freeze -e /secret/data /mnt/nas/data/secret.sqfs_luks.img"
         echo "  zks unfreeze /mnt/nas/data/backup.sqfs"
+        return 0
     end
 
     if test (count $argv) -eq 0
@@ -44,7 +45,7 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
             # From file
             if set -q _flag_read
                 if test -f "$_flag_read"
-                    # Read non-empty lines, ignoring comments if any (simple implementation)
+                    # Read non-empty lines, ignoring comments if any
                     set targets $targets (cat "$_flag_read" | string trim | string match -r -v '^$')
                 else
                     echo "Error: Target file '$_flag_read' not found."
@@ -53,7 +54,6 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
             end
 
             # From arguments (remaining argv)
-            # The last argument is the output archive, everything before is targets
             set -l args_count (count $argv)
             if test $args_count -lt 1
                 echo "Error: Output archive path is required."
@@ -62,7 +62,7 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
 
             set output_archive $argv[$args_count]
             
-            # If there are targets in argv, add them (excluding the last one which is output)
+            # If there are targets in argv, add them
             if test $args_count -gt 1
                 set -l arg_targets $argv[1..-2]
                 set targets $targets $arg_targets
@@ -92,38 +92,40 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
             end
 
             # Prepare for isolation
-            set -l build_id (random)
-            set -l target_list_file "/tmp/zks_targets_$build_id.txt"
+            set -l build_uuid (random)
+            # FIX 1: Generate build path in HOST to avoid race condition in cleanup
+            set -l host_build_dir "/tmp/zks_build_$build_uuid"
+            
+            set -l target_list_file "/tmp/zks_targets_$build_uuid.txt"
             string join \n -- $targets > $target_list_file
 
-            # Get absolute path to squash_manager source to source it inside unshare
-            set -l sq_man_path (functions --details squash_manager)
+            # FIX 3: Resolve absolute path
+            set -l sq_man_path (realpath (functions --details squash_manager))
             
             # Export variables for the subshell
             set -lx ZKS_TARGET_LIST $target_list_file
-            set -lx ZKS_OUTPUT (realpath -m $output_archive) # Resolve absolute path for output
+            set -lx ZKS_OUTPUT (realpath -m $output_archive)
             set -lx ZKS_SQ_PATH $sq_man_path
             set -lx ZKS_ENCRYPT $_flag_encrypt
             set -lx ZKS_HOSTNAME (hostname)
+            set -lx ZKS_BUILD_DIR $host_build_dir
 
             echo "🧊 Freezing data..."
 
             # Execute functionality inside a new mount namespace
-            # We use `sudo -E` to preserve our exported variables.
-            # `unshare -m --propagation private` ensures our binds don't leak.
              sudo -E unshare -m --propagation private fish -c '
                 # --- INSIDE NAMESPACE ---
                 
                 # 1. Load dependency
                 source $ZKS_SQ_PATH
 
-                # 2. Create Skeleton
-                set -l build_root "/tmp/zks_build_"(random)
-                set -l restore_root "$build_root/to_restore"
+                # 2. Create Skeleton (Use specific path passed from host)
+                mkdir -p $ZKS_BUILD_DIR
+                set -l restore_root "$ZKS_BUILD_DIR/to_restore"
                 mkdir -p $restore_root
 
                 # 3. Create Manifest
-                set -l manifest "$build_root/list.yaml"
+                set -l manifest "$ZKS_BUILD_DIR/list.yaml"
                 echo "metadata:" > $manifest
                 echo "  date: \"$(date)\"" >> $manifest
                 echo "  host: \"$ZKS_HOSTNAME\"" >> $manifest
@@ -133,11 +135,7 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
                 set -l counter 1
                 cat $ZKS_TARGET_LIST | while read -l target_path
                     if test -z "$target_path"; continue; end
-                    
-                    # Resolve absolute path for the target to ensure mount works
-                    # (Though user should ideally provide absolute paths, we rely on what was passed)
-                    # Note: We can only rely on paths existing as verified outside.
-                    
+
                     set -l container_dir "$restore_root/$counter"
                     mkdir -p $container_dir
 
@@ -163,7 +161,7 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
                 end
 
                 echo "📦 Packing to $ZKS_OUTPUT..."
-                squash_manager create $enc_arg --no-progress "$build_root" "$ZKS_OUTPUT"
+                squash_manager create $enc_arg --no-progress "$ZKS_BUILD_DIR" "$ZKS_OUTPUT"
                 
                 if test $status -eq 0
                     exit 0
@@ -176,12 +174,9 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
             # Cleanup in host system
             rm -f $target_list_file
             
-            # Clean up the build directory skeleton (which is now empty of mounts)
-            # Find the directories created by the subshell. 
-            # Since we can"t know the exact random ID generated inside, we look for the pattern.
-            # This is safe because `unshare` has exited, so mounts are gone.
-            for d in /tmp/zks_build_*
-                rm-if-empty "$d"
+            # FIX 1: Cleanup specific dir
+            if test -d "$host_build_dir"
+                rm-if-empty "$host_build_dir"
             end
 
             if test $exit_code -eq 0
@@ -195,7 +190,12 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
 
 
         case unfreeze
-            # --- UNFREEZE LOGIC ---
+            argparse 'h/help' -- $argv
+            if set -q _flag_help
+                _zks_help
+                return 0
+            end
+
             if test (count $argv) -lt 1
                 echo "Error: Archive path required."
                 return 1
@@ -206,6 +206,9 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
                 echo "Error: Archive '$archive_path' not found."
                 return 1
             end
+
+            # Need get_root_cmd for writing to protected dirs
+            set -l root_cmd (functions -q get_root_cmd; and get_root_cmd; or echo "sudo")
 
             # Temporary mount point
             set -l mount_point "/tmp/zks_mnt_"(random)
@@ -222,24 +225,18 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
             end
 
             echo "📖 Reading manifest..."
-            # Simple parsing of the yaml to extract IDs and Paths. 
-            # We assume the structure is generated by 'freeze'.
-            # We"ll use grep/sed/awk for basic parsing since we don"t have a yaml parser.
             
-            # Extract IDs and Paths into lists
+            # Parse manifest
             set -l ids
             set -l paths
             set -l types
             
-            # Parse line by line
             set -l current_id ""
-            # Using cat and while loop
             cat $manifest | while read -l line
                 if string match -q "*id: *" -- $line
                     set current_id (string replace -r ".*id: " "" -- $line)
                     set -a ids $current_id
                 else if string match -q "*original_path: *" -- $line
-                     # Only if we have a current ID (sanity check)
                      if test -n "$current_id"
                         set -l p (string replace -r ".*original_path: \"" "" -- $line | string replace -r "\"" "" )
                         set -a paths $p
@@ -252,80 +249,95 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
                 end
             end
 
-            # User Interaction
+            # FIX 5: Interactive Logic Flags
+            set -l restore_all_subsequent 0
             set -l restore_count 0
+
             for i in (seq (count $ids))
                 set -l id $ids[$i]
                 set -l orig_path $paths[$i]
                 set -l type $types[$i]
                 
-                echo ""
-                echo "Entry #$id:"
-                echo "  Path: $orig_path"
-                echo "  Type: $type"
+                # Check for subsequent 'all' flag
+                set -l do_restore 0
                 
-                read -P "restoring this entry? [y/N/a(all)/q(quit)] " -l choice
-                
-                switch $choice
-                    case y Y yes
-                        # Proceed
-                    case a A all
-                        # Restore this and all subsequent? Or just flag? 
-                        # For simplicity, let's just proceed and maybe implement 'all' loop later or assumed 'y' for rest.
-                        # But simpler: just process this one and continue. 
-                        # Actually 'all' implies we stop asking.
-                        # Let's support individual 'y' for now to keep it simple as per MVP.
-                        # But wait, 'a' is common.
-                         set -U _zks_restore_all 1 # Use universal or global var? Scoping issues. 
-                         # Better: logic inside loop.
-                    case q Q quit
-                        break
-                    case '*'
-                        continue
+                if test $restore_all_subsequent -eq 1
+                    set do_restore 1
+                    echo "Auto-restoring #$id -> $orig_path"
+                else
+                    echo ""
+                    echo "Entry #$id:"
+                    echo "  Path: $orig_path"
+                    echo "  Type: $type"
+                    
+                    read -P "Restore this? [y/n/a(all)/q(quit)] " -l choice
+                    
+                    switch $choice
+                        case y Y yes
+                            set do_restore 1
+                        case a A all
+                            set do_restore 1
+                            set restore_all_subsequent 1
+                        case q Q quit
+                            break
+                        case n N no
+                            set do_restore 0
+                        case '*'
+                            # Default to no? or re-ask? treating as skip (no) for simplicity
+                            set do_restore 0
+                    end
                 end
 
-               
-                echo "  Restoring..."
-                
-                # Prepare destination
-                set -l dest_dir (dirname "$orig_path")
-                if not test -d "$dest_dir"
-                    mkdir -p "$dest_dir"
+                if test $do_restore -eq 1
+                    echo "  Restoring..."
+                    
+                    set -l dest_dir (dirname "$orig_path")
+                    if not test -d "$dest_dir"
+                        # Create parent dir if needed. Might need sudo.
+                         if test -w (dirname "$dest_dir")
+                            mkdir -p "$dest_dir"
+                         else
+                            $root_cmd mkdir -p "$dest_dir"
+                         end
+                    end
+                    
+                    set -l src_path "$mount_point/to_restore/$id/"
+                    
+                    # FIX 2: Check Permissions
+                    set -l rsync_cmd "rsync"
+                    if not test -w "$dest_dir"
+                         echo "  Notice: Use $root_cmd to write to $dest_dir"
+                         set rsync_cmd "$root_cmd rsync"
+                    end
+
+                    if test "$type" = "directory"
+                         # ensure target exists
+                         if not test -d "$orig_path"
+                             if test -w "$dest_dir"
+                                mkdir -p "$orig_path"
+                             else
+                                $root_cmd mkdir -p "$orig_path"
+                             end
+                         end
+                         
+                         $rsync_cmd -av "$src_path" "$orig_path/"
+                    else
+                         set -l files_inside (ls "$src_path")
+                         if test (count $files_inside) -eq 1
+                             set -l file_src "$src_path/$files_inside[1]"
+                             $rsync_cmd -av "$file_src" "$orig_path"
+                         else
+                             echo "Warning: Ambiguous file content for ID $id. Skipping."
+                         end
+                    end
+                    
+                    set restore_count (math $restore_count + 1)
                 end
-                
-                # Source path in mount context
-                set -l src_path "$mount_point/to_restore/$id/"
-                
-                # Check if it's a file or dir inside the container (container is always a dir in our structure)
-                # But inside that dir:
-                # If type was directory: source is $src_path/ (content of dir)
-                # If type was file: source is $src_path/filename
-                
-                if test "$type" = "directory"
-                     # rsync content of container dir to target dir
-                     # $src_path/ -> $orig_path/
-                     # ensuring $orig_path exists
-                     mkdir -p "$orig_path"
-                     rsync -av "$src_path" "$orig_path/"
-                else
-                     # For file, there should be one file inside $src_path
-                     # We find it
-                     set -l files_inside (ls "$src_path")
-                     if test (count $files_inside) -eq 1
-                         set -l file_src "$src_path/$files_inside[1]"
-                         rsync -av "$file_src" "$orig_path"
-                     else
-                         echo "Warning: Ambiguous file content for ID $id. Skipping."
-                     end
-                end
-                
-                set restore_count (math $restore_count + 1)
             end
 
             echo ""
             echo "Restoration complete. ($restore_count items processed)"
             
-            # Clean up
             squash_manager umount "$mount_point"
 
         case '*'
