@@ -76,7 +76,7 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
                     set user_prefix "zks"
                 end
                 
-                set -l new_name "{$user_prefix}_{$timestamp}.sqfs"
+                set -l new_name "$user_prefix"_"$timestamp".sqfs
                 # Strip trailing slash if present then append filename
                 set output_archive (string trim -r -c / -- "$output_archive")"/$new_name"
                 echo "Saving to: $output_archive"
