@@ -81,7 +81,7 @@ Clone the repository and copy functions to `~/.config/fish/functions/`.
 | **update-grub** | Shortcut to update GRUB2 configuration (Ubuntu-style style command for Arch). | N/A | `grub` | Interface: N/A, Decription/source code comments:   Russian |
 | **which-versions** | Show all installed paths and versions for a specific program. | `<command>` | N/A | Russian |
 | **yt-dlp-transcript** | Download subtitles/transcripts from YouTube using `yt-dlp`. | `[url]`, `--lang`, `--vtt`, `--text` | `yt-dlp` | Russian |
-| **zero-kelvin-store** | Zero-Kelvin Store: Freeze data to SquashFS and Unfreeze back. | `freeze`, `unfreeze`, `--encrypt` (`-e`) | `squash_manager`, `rm-if-empty` | English |
+| **zero-kelvin-store** | Zero-Kelvin Store: Freeze data to SquashFS and Unfreeze back. | `freeze`, `unfreeze`, `check`, `--encrypt`, `--use-cmp`, `--force-delete` | `squash_manager`, `rm-if-empty` | English |
 
 
 

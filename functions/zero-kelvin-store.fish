@@ -10,6 +10,8 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
         echo ""
         echo "  unfreeze <archive_path>               Restore data from an archive"
         echo ""
+        echo "  check <archive_path>                  Verify archive integrity vs live system"
+        echo ""
         echo "Freeze Options:"
         echo "  -e, --encrypt                         Encrypt the archive using LUKS (via squash_manager)"
         echo "  -r, --read <file>                     Read list of targets from a file"
