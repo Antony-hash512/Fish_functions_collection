@@ -112,13 +112,21 @@ function zero-kelvin-store --description "Zero-Kelvin Store: Freeze data to Squa
             set -lx ZKS_OUTPUT (realpath -m $output_archive)
             set -lx ZKS_SQ_PATH $sq_man_path
             set -lx ZKS_ENCRYPT $_flag_encrypt
-            set -lx ZKS_HOSTNAME (hostname)
+            set -lx ZKS_HOSTNAME (uname -n)
             set -lx ZKS_BUILD_DIR $host_build_dir
 
             echo "🧊 Freezing data..."
 
             # Execute functionality inside a new mount namespace
-             sudo -E unshare -m --propagation private fish -c '
+            # Passing variables explicitly because some sudo configs reject -E
+            sudo \
+                ZKS_TARGET_LIST="$ZKS_TARGET_LIST" \
+                ZKS_OUTPUT="$ZKS_OUTPUT" \
+                ZKS_SQ_PATH="$ZKS_SQ_PATH" \
+                ZKS_ENCRYPT="$ZKS_ENCRYPT" \
+                ZKS_HOSTNAME="$ZKS_HOSTNAME" \
+                ZKS_BUILD_DIR="$ZKS_BUILD_DIR" \
+                unshare -m --propagation private fish -c '
                 # --- INSIDE NAMESPACE ---
                 
                 # 1. Load dependency
