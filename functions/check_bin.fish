@@ -1,52 +1,63 @@
-function check_bin --description "Check if binary name exists in Arch repos or AUR"
+function check_bin --description "Check if binary/package name exists in Arch repos or AUR"
     set -l bin_name $argv[1]
 
     if test -z "$bin_name"
-        echo "Usage: check_bin <binary_name>"
+        echo "Usage: check_bin <name>"
         return 1
     end
 
-    echo "🔍 Checking official repositories for 'usr/bin/$bin_name'..."
-    # Используем -F с точным путем usr/bin/
-    # 2>/dev/null скрывает ошибки, если база не найдена (но лучше держать её обновленной через pacman -Fy)
-    set -l repo_result (pacman -F "usr/bin/$bin_name" 2>/dev/null)
+    # 1. Проверяем официальные репозитории (по файлу)
+    echo "🔍 [1/3] Checking Official Repos for file 'usr/bin/$bin_name'..."
+    set -l repo_file_result (pacman -F "usr/bin/$bin_name" 2>/dev/null)
 
-    if test -n "$repo_result"
+    if test -n "$repo_file_result"
         set_color red
-        echo "❌ BUSY in Official Repos:"
+        echo "❌ BUSY: Binary exists in Official Repos:"
         set_color normal
-        # Выводим только строки с именем пакета и веткой (core/extra)
-        for line in $repo_result
-             # Простая фильтрация вывода pacman -F, чтобы показать пакет
+        for line in $repo_file_result
              if string match -q "*/*" $line
                  echo "   -> $line"
              end
         end
     else
         set_color green
-        echo "✅ FREE in Official Repos (usr/bin/$bin_name not found)"
+        echo "✅ FREE: No binary 'usr/bin/$bin_name' found in Official Repos"
         set_color normal
     end
 
     echo ""
-    echo "🔍 Checking AUR for package names containing '$bin_name'..."
-    # Поиск в AUR через paru (или yay, если paru нет)
-    if type -q paru
-        paru -Ss -q "$bin_name" | grep -iE "^aur/$bin_name "
-    else if type -q yay
-        yay -Ss -q "$bin_name" | grep -iE "^aur/$bin_name "
-    else
-        echo "⚠️  AUR helper (paru/yay) not found, skipping AUR check."
-    end
     
-    # Для AUR мы просто показываем grep, если вывод пустой — значит чисто.
-    if test $status -eq 0
-         set_color red
-         echo "⚠️  Found matches in AUR (see above)"
-         set_color normal
+    # 2. Проверяем Официальные репозитории (по имени пакета)
+    # Иногда бинарника нет, но имя пакета занято (например, библиотеки или мета-пакеты)
+    echo "🔍 [2/3] Checking Official Repos for package name '$bin_name'..."
+    if pacman -Si "$bin_name" > /dev/null 2>&1
+        set_color red
+        echo "❌ BUSY: Package '$bin_name' already exists in Official Repos"
+        set_color normal
     else
-         set_color green
-         echo "✅ No exact package match in AUR found"
-         set_color normal
+        set_color green
+        echo "✅ FREE: Package name '$bin_name' is available in Official Repos"
+        set_color normal
+    end
+
+    echo ""
+
+    # 3. Проверяем AUR (по точному имени пакета)
+    echo "🔍 [3/3] Checking AUR for package name '$bin_name'..."
+    if type -q paru
+        # Используем -Si. Если пакет есть, код возврата 0.
+        if paru -Si "$bin_name" > /dev/null 2>&1
+            set_color red
+            echo "❌ BUSY: Package '$bin_name' already exists in AUR"
+            set_color normal
+            # Показываем краткую инфо
+            paru -Si "$bin_name" | grep -E "Description|Version|URL" | sed 's/^/   -> /'
+        else
+            set_color green
+            echo "✅ FREE: Package name '$bin_name' seems available in AUR"
+            set_color normal
+        end
+    else
+        echo "⚠️  paru/yay not found, skipping AUR check."
     end
 end
