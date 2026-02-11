@@ -115,15 +115,16 @@ function squash_manager --description "Smartly manage SquashFS: create (optional
             set -l decompress_cmd
             if not test -d $input_path
                 switch $input_path
-                    case '*.tar.zst' '*.tzst'; set decompress_cmd zstd -dcf
-                    case '*.tar.gz' '*.tgz'; set decompress_cmd gzip -dcf
-                    case '*.tar.xz' '*.txz'; set decompress_cmd xz -dcf
-                    case '*.tar.bz2' '*.tbz'; set decompress_cmd bzip2 -dcf
-                    case '*.tar'; set decompress_cmd cat
+                    case '*.tar.zst' '*.tzst';   set decompress_cmd zstd -dcf
+                    case '*.tar.gz' '*.tgz';     set decompress_cmd gzip -dcf
+                    case '*.tar.xz' '*.txz';     set decompress_cmd xz -dcf
+                    case '*.tar.bz2' '*.tbz';    set decompress_cmd bzip2 -dcf
+                    case '*.tar';                set decompress_cmd cat
                     case '*.7z' '*.zip' '*.rar' '*.iso'
                         type -q bsdtar; or begin; echo "Error: bsdtar required"; return 1; end
                         set decompress_cmd bsdtar -c -f - --format=tar "@-"
-                    case '*'; echo "Error: Unknown format"; return 1; end
+                    case '*'; echo "Error: Unknown format"; return 1;
+                end
             end
 
             set -l tmp_map "sq_v_"(random)
@@ -183,7 +184,8 @@ function squash_manager --description "Smartly manage SquashFS: create (optional
                         # Для архивов через tar2sqfs
                         # tar2sqfs умеет писать в блок-девайс
                         set -l source_cmd (type -q pv; and not set -q _flag_no_progress; and echo "pv \"$input_path\""; or echo "cat \"$input_path\"")
-                        fish -c "$source_cmd | $decompress_cmd | $root_cmd tar2sqfs -c zstd -X level=$comp_level -b 1M --force -o /dev/mapper/$tmp_map"
+                        # ИСПРАВЛЕНО: удален флаг -o, путь передан позиционным аргументом
+                        fish -c "$source_cmd | $decompress_cmd | $root_cmd tar2sqfs -c zstd -X level=$comp_level -b 1M --force /dev/mapper/$tmp_map"
                     end
                     set -l sq_status $status
 
@@ -221,7 +223,7 @@ function squash_manager --description "Smartly manage SquashFS: create (optional
                                  set trim_size (math "ceil($raw_trim_size / 4096) * 4096")
                              else
                                  echo "Warning: Could not determine optimal size. Skipping trim."
-                                 if test -z "$fs_size_bytes"; echo "Minning fs_size_bytes. unsquashfs raw: $sq_info"; end
+                                 if test -z "$fs_size_bytes"; echo "Missing fs_size_bytes. unsquashfs raw: $sq_info"; end
                                  if test -z "$offset_bytes"; echo "Missing payload offset. luksDump raw: $luks_dump"; end
                              end
                         else
@@ -261,7 +263,8 @@ function squash_manager --description "Smartly manage SquashFS: create (optional
                      mksquashfs "$input_path" "$output_path" $mk_opts
                  else
                     set -l source_cmd (type -q pv; and not set -q _flag_no_progress; and echo "pv \"$input_path\""; or echo "cat \"$input_path\"")
-                    fish -c "$source_cmd | $decompress_cmd | tar2sqfs -c zstd -X level=$comp_level -b 1M --force -o \"$output_path\""
+                    # ИСПРАВЛЕНО: удален флаг -o, путь передан позиционным аргументом
+                    fish -c "$source_cmd | $decompress_cmd | tar2sqfs -c zstd -X level=$comp_level -b 1M --force \"$output_path\""
                 end
             end
 
