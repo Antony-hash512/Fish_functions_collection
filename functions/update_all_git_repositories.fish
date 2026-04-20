@@ -41,10 +41,10 @@ function update_all_git_repositories --description "Обновить все ве
                 # Если передан флаг --quiet (или -q), делаем "как раньше"
                 if set -q _flag_quiet
                     if test "$branch" = "$current_branch"
-                        echo "  -> Активная ветка [$branch]: попытка fast-forward..."
+                        echo "  -> Активная ветка [$branch] попытка fast-forward..."
                         git pull --ff-only --quiet
                     else
-                        echo "  -> Фоновая ветка [$branch]: попытка fast-forward из $upstream..."
+                        echo "  -> Фоновая ветка [$branch] попытка fast-forward из $upstream..."
                         git fetch . $upstream:$branch 2>/dev/null
                         
                         if test $status -ne 0
@@ -57,10 +57,10 @@ function update_all_git_repositories --description "Обновить все ве
                     set -l upstream_hash (git rev-parse $upstream)
 
                     if test "$local_hash" = "$upstream_hash"
-                        echo "  -> Ветка [$branch]: уже актуальна."
+                        echo "  -> Ветка [$branch] уже актуальна."
                     else
                         if test "$branch" = "$current_branch"
-                            echo -n "  -> Активная ветка [$branch]: "
+                            echo -n "  -> Активная ветка [$branch] ... "
                             git pull --ff-only --quiet
                             if test $status -eq 0
                                 echo -e "\033[0;32mуспешно обновлена (fast-forward)\033[0m"
@@ -68,7 +68,7 @@ function update_all_git_repositories --description "Обновить все ве
                                 echo -e "\033[0;31m[!] ошибка (вероятно, конфликтуют локальные изменения)\033[0m"
                             end
                         else
-                            echo -n "  -> Фоновая ветка [$branch]: "
+                            echo -n "  -> Фоновая ветка [$branch] ...  "
                             git fetch . $upstream:$branch 2>/dev/null
                             if test $status -eq 0
                                 echo -e "\033[0;32mуспешно обновлена из $upstream\033[0m"
@@ -79,7 +79,7 @@ function update_all_git_repositories --description "Обновить все ве
                     end
                 end
             else
-                echo "  -> Ветка [$branch]: пропущена (нет upstream)."
+                echo "  -> Ветка [$branch] пропущена (нет upstream)."
             end
         end
 
