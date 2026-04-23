@@ -25,8 +25,9 @@ function pass --description "Smart Pass: Auto-pull on modify + Vim editor"
     # 4. Настройка редактора (Vim для edit)
     if contains -- $subcommand edit
         set -lx EDITOR vim
+        set -lx VISUAL vim
     end
 
     # 5. Выполнение самой команды pass
-    command pass $argv
+    EDITOR=vim VISUAL=vim command pass $argv
 end
