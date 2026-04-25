@@ -84,4 +84,8 @@ Clone the repository and copy functions to `~/.config/fish/functions/`.
 | **zero-kelvin-store** | Zero-Kelvin Store: Freeze data to SquashFS and Unfreeze back. | `freeze`, `unfreeze`, `check`, `--encrypt`, `--use-cmp`, `--force-delete` | `squash_manager`, `rm-if-empty` | English |
 
 
+## How to test the new function
 
+```fish
+say-ru-correct-stress "+Я горько пл+ачу, когда плач+у по сч+там за этот старинный з+амок, на дв+ерях которого висит огромный зам+ок. Это настоящая м+ука — пытаться испечь хлеб, когда закончилась пшеничная мука+."
+```
