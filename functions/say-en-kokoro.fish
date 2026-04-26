@@ -25,7 +25,10 @@ import logging
 os.environ["TRANSFORMERS_VERBOSITY"] = "error"
 os.environ["PYTHONWARNINGS"] = "ignore"
 
-original_stdout = sys.stdout
+# Защищаем stdout на уровне ОС (file descriptor 1) от сторонних библиотек (например spacy),
+# которые могут запускать subprocess или писать на С напрямую.
+original_stdout_fd = os.dup(1)
+os.dup2(2, 1)
 sys.stdout = sys.stderr
 
 warnings.filterwarnings("ignore")
@@ -57,8 +60,7 @@ if all_audio:
     wav_io = io.BytesIO()
     scipy.io.wavfile.write(wav_io, 24000, audio_int16)
 
-    sys.stdout = original_stdout
-    sys.stdout.buffer.write(wav_io.getvalue())' > "$script_path"
+    os.write(original_stdout_fd, wav_io.getvalue())' > "$script_path"
         echo "✅ Script successfully updated!"
         
         if not set -q _flag_fast; and test -z "$argv"
