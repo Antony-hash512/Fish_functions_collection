@@ -67,7 +67,7 @@ Clone the repository and copy functions to `~/.config/fish/functions/`.
 | **nat_on4nas_iptables** | Enable NAT to share internet to another device (e.g., NAS) interactively. | Interactive | `iptables`, `iproute2` | Russian |
 | **nat_off4nas_iptables**| Disable NAT and clear `iptables` rules for internet sharing. | N/A | `iptables` | Russian |
 | **nvim** | Wrapper to run Neovim with `SHELL=/bin/bash` (compatibility fix). | `[args...]` | `neovim` | Interface: N/A, Description/Source code comments: Russian |
-| **paru_clean** | Clean `paru` (AUR helper) cache, keeping the last 2 versions. | N/A | `pacman-contrib`, `paru` | Russian |
+| **paru_clean** | Clean `paru` (AUR helper) cache, keeping the last N versions. | `-k, --keep <N>` | `pacman-contrib`, `paru` | Russian |
 | **rm-if-empty** | Safely remove directory ONLY if it contains 0-byte files or empty directories. | `<target_dir>` | `find` | Russian comments, English description |
 | **rsync2nas_move** | Move files to NAS using `rsync` with `size-only` check. | `<source> <target>` | `rsync` | Russian |
 | **save_local_torrents**| Export loaded `.torrent` files from local Deluge with human-readable names. | `[dest_dir]` | `deluge` | Mixed: Russian (Interface, source code comments) /  English (description) |
