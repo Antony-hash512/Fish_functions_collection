@@ -111,9 +111,6 @@ say-ru-correct-stress "+Я горько пл+ачу, когда плач+у по
 ```
 
 ### English (Kokoro Smart Context)
-```fish
-say-en-kokoro "The quick brown fox jumps over the lazy dog. How much wood would a woodchuck chuck if a woodchuck could chuck wood?"
-```
 
 ```fish
 say-en-kokoro "I present my new present."
