@@ -114,3 +114,11 @@ say-ru-correct-stress "+Я горько пл+ачу, когда плач+у по
 ```fish
 say-en-kokoro "The quick brown fox jumps over the lazy dog. How much wood would a woodchuck chuck if a woodchuck could chuck wood?"
 ```
+
+```fish
+say-en-kokoro "I present my new present."
+say-en-kokoro "I object to putting this object on the table."
+say-en-kokoro "I live my life and watch a live broadcast on TV."
+say-en-kokoro "Please record the exact time when he breaks the world record."
+say-en-kokoro "Since I already read the book yesterday, I do not want to read it again."
+```

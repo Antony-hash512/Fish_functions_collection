@@ -43,7 +43,7 @@ text = sys.argv[1] if len(sys.argv) > 1 else "Text not provided."
 
 # Initialize pipeline for American English ("a")
 # Model will download automatically on first run!
-pipeline = KPipeline(lang_code="a")
+pipeline = KPipeline(lang_code="a", repo_id="hexgrad/Kokoro-82M")
 
 # Use high-quality female voice (af_heart)
 generator = pipeline(text, voice="af_heart", speed=1.0)
@@ -164,12 +164,12 @@ if all_audio:
 
     # Run via uv with all necessary dependencies
     if test "$action" = "save"
-        uv run --python 3.12 --with "torch" --with "kokoro>=0.8.4" --with "scipy" --with "soundfile" "$script_path" "$text_to_say" > "$save_file"
+        uv run --python 3.12 --with "torch" --with "kokoro>=0.8.4" --with "scipy" --with "soundfile" --with "spacy" --with "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl" "$script_path" "$text_to_say" > "$save_file"
         echo "✅ File saved: $save_file"
     else if test "$action" = "play_and_save"
-        uv run --python 3.12 --with "torch" --with "kokoro>=0.8.4" --with "scipy" --with "soundfile" "$script_path" "$text_to_say" | tee "$save_file" | eval $play_cmd
+        uv run --python 3.12 --with "torch" --with "kokoro>=0.8.4" --with "scipy" --with "soundfile" --with "spacy" --with "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl" "$script_path" "$text_to_say" | tee "$save_file" | eval $play_cmd
         echo "✅ File saved: $save_file"
     else
-        uv run --python 3.12 --with "torch" --with "kokoro>=0.8.4" --with "scipy" --with "soundfile" "$script_path" "$text_to_say" | eval $play_cmd
+        uv run --python 3.12 --with "torch" --with "kokoro>=0.8.4" --with "scipy" --with "soundfile" --with "spacy" --with "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl" "$script_path" "$text_to_say" | eval $play_cmd
     end
 end
