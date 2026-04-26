@@ -10,7 +10,7 @@ function say-en-kokoro --description "Text-to-Speech (Kokoro Smart Context) via 
     set -l kokoro_dir ~/.local/share/kokoro-en
     set -l script_path "$kokoro_dir/tts_inference.py"
 
-    # --- САМОРАСПАКОВКА PYTHON-СКРИПТА ---
+    # --- PYTHON SCRIPT SELF-EXTRACTION ---
     if set -q _flag_update; or not test -f "$script_path"
         echo "▶ Setting up Kokoro environment in $kokoro_dir..."
         mkdir -p "$kokoro_dir"
@@ -21,12 +21,12 @@ import io
 import warnings
 import logging
 
-# Глушим логи
+# Silence logs
 os.environ["TRANSFORMERS_VERBOSITY"] = "error"
 os.environ["PYTHONWARNINGS"] = "ignore"
 
-# Защищаем stdout на уровне ОС (file descriptor 1) от сторонних библиотек (например spacy),
-# которые могут запускать subprocess или писать на С напрямую.
+# Protect stdout at the OS level (file descriptor 1) from third-party libraries (like spacy),
+# which may start subprocesses or write to C directly.
 original_stdout_fd = os.dup(1)
 os.dup2(2, 1)
 sys.stdout = sys.stderr
@@ -41,11 +41,11 @@ from kokoro import KPipeline
 
 text = sys.argv[1] if len(sys.argv) > 1 else "Text not provided."
 
-# Инициализируем пайплайн для американского английского ("a")
-# Модель скачается автоматически при первом запуске!
+# Initialize pipeline for American English ("a")
+# Model will download automatically on first run!
 pipeline = KPipeline(lang_code="a")
 
-# Используем качественный женский голос (af_heart)
+# Use high-quality female voice (af_heart)
 generator = pipeline(text, voice="af_heart", speed=1.0)
 
 all_audio = []
@@ -54,7 +54,7 @@ for _, _, audio in generator:
 
 if all_audio:
     final_audio = np.concatenate(all_audio)
-    # Конвертируем студийный float32 в стандартный 16-bit PCM (paplay его обожает)
+    # Convert studio float32 to standard 16-bit PCM (paplay loves it)
     audio_int16 = (final_audio * 32767.0).astype(np.int16)
 
     wav_io = io.BytesIO()
@@ -67,9 +67,9 @@ if all_audio:
             return 0
         end
     end
-    # --- КОНЕЦ САМОРАСПАКОВКИ ---
+    # --- END OF SELF-EXTRACTION ---
 
-    # Логика выбора устройства и действия
+    # Device selection and action logic
     set -l play_cmd paplay
     set -l save_file ""
     set -l action "play"
@@ -145,7 +145,7 @@ if all_audio:
         end
     end
 
-    # Текст из буфера
+    # Text from clipboard
     set -l text_to_say "$argv"
     if test -z "$text_to_say"
         if set -q WAYLAND_DISPLAY
@@ -162,7 +162,7 @@ if all_audio:
     echo "▶ Reading text (Kokoro Smart Context)..."
     echo "  (Press Ctrl+C to stop. First run will download ~300MB model)"
 
-    # Запускаем через uv со всеми нужными зависимостями
+    # Run via uv with all necessary dependencies
     if test "$action" = "save"
         uv run --python 3.12 --with "torch" --with "kokoro>=0.8.4" --with "scipy" --with "soundfile" "$script_path" "$text_to_say" > "$save_file"
         echo "✅ File saved: $save_file"
