@@ -1,6 +1,6 @@
 function say-ru-correct-stress --description "Озвучить текст (VITS+ruaccent) через uv (Portable)"
     # Парсим флаги: -f/--fast для быстрого запуска, -u/--update для перезаписи python-скрипта
-    argparse 'f/fast' 'u/update' -- $argv
+    argparse 'f/fast' 'u/update' 's/save=' 'p/play-and-save=' -- $argv
     or return 1
 
     if not command -v uv >/dev/null
@@ -88,19 +88,80 @@ sys.stdout.buffer.write(wav_io.getvalue())
     end
     # --- КОНЕЦ САМОРАСПАКОВКИ ---
 
-    # Логика выбора устройства
+    # Логика выбора устройства и действия
     set -l play_cmd paplay
+    set -l save_file ""
+    set -l action "play"
+
+    if set -q _flag_save
+        set action "save"
+        set save_file $_flag_save
+    else if set -q _flag_play_and_save
+        set action "play_and_save"
+        set save_file $_flag_play_and_save
+    end
+
     if not set -q _flag_fast
-        set -l sinks (pactl list short sinks | awk '{print $2}')
-        set -l selected_sink (printf "%s\n" $sinks | fzf --prompt="Куда выводить звук (Новый движок)? > " --height=10 --layout=reverse)
-        if test -z "$selected_sink"
-            echo "Отмена."
-            return 0
+        if test "$action" = "save"
+            echo "▶ Режим: Сохранение в файл ($save_file)"
+        else if test "$action" = "play_and_save"
+            set -l sinks (pactl list short sinks | awk '{print $2}')
+            set -l selected_sink (printf "%s\n" $sinks | fzf --prompt="Куда выводить звук? > " --height=10 --layout=reverse)
+            if test -z "$selected_sink"
+                echo "Отмена."
+                return 0
+            end
+            set -a play_cmd --device=$selected_sink
+            echo "▶ Устройство: $selected_sink"
+            echo "▶ Файл для сохранения: $save_file"
+        else
+            set -l sinks (pactl list short sinks | awk '{print $2}')
+            set -l menu_options
+            for s in $sinks
+                set -a menu_options "🔊 Озвучить: $s"
+                set -a menu_options "💾🔊 Озвучить и сохранить: $s"
+            end
+            set -a menu_options "💾 Только сохранить в файл"
+
+            set -l selected_option (printf "%s\n" $menu_options | fzf --prompt="Выберите действие > " --height=15 --layout=reverse)
+            
+            if test -z "$selected_option"
+                echo "Отмена."
+                return 0
+            end
+
+            if string match -q "💾 Только сохранить*" "$selected_option"
+                set action "save"
+                read -P "Введите имя файла (.wav): " save_file
+                if test -z "$save_file"
+                    echo "Отмена. Имя файла не задано."
+                    return 0
+                end
+            else if string match -q "💾🔊 Озвучить и сохранить:*" "$selected_option"
+                set action "play_and_save"
+                set -l selected_sink (string replace "💾🔊 Озвучить и сохранить: " "" "$selected_option")
+                set -a play_cmd --device=$selected_sink
+                read -P "Введите имя файла (.wav): " save_file
+                if test -z "$save_file"
+                    echo "Отмена. Имя файла не задано."
+                    return 0
+                end
+                echo "▶ Устройство: $selected_sink"
+            else if string match -q "🔊 Озвучить:*" "$selected_option"
+                set action "play"
+                set -l selected_sink (string replace "🔊 Озвучить: " "" "$selected_option")
+                set -a play_cmd --device=$selected_sink
+                echo "▶ Устройство: $selected_sink"
+            end
         end
-        set -a play_cmd --device=$selected_sink
-        echo "▶ Устройство: $selected_sink"
     else
-        echo "▶ Режим --fast: устройство по умолчанию"
+        if test "$action" = "play_and_save"
+            echo "▶ Режим --fast: устройство по умолчанию, сохранение в $save_file"
+        else if test "$action" = "save"
+            echo "▶ Режим: Сохранение в файл ($save_file)"
+        else
+            echo "▶ Режим --fast: устройство по умолчанию"
+        end
     end
 
     # Текст из буфера
@@ -121,5 +182,13 @@ sys.stdout.buffer.write(wav_io.getvalue())
     echo "  (Нажми Ctrl+C для остановки)"
 
     # Запуск Python 3.12 со старыми transformers
-    uv run --python 3.12 --with "torch" --with "transformers<4.40" --with "ruaccent" --with "scipy" "$script_path" "$text_to_say" | eval $play_cmd
+    if test "$action" = "save"
+        uv run --python 3.12 --with "torch" --with "transformers<4.40" --with "ruaccent" --with "scipy" "$script_path" "$text_to_say" > "$save_file"
+        echo "✅ Файл сохранен: $save_file"
+    else if test "$action" = "play_and_save"
+        uv run --python 3.12 --with "torch" --with "transformers<4.40" --with "ruaccent" --with "scipy" "$script_path" "$text_to_say" | tee "$save_file" | eval $play_cmd
+        echo "✅ Файл сохранен: $save_file"
+    else
+        uv run --python 3.12 --with "torch" --with "transformers<4.40" --with "ruaccent" --with "scipy" "$script_path" "$text_to_say" | eval $play_cmd
+    end
 end
