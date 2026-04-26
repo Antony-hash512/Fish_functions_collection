@@ -46,7 +46,9 @@ Clone the repository and copy functions to `~/.config/fish/functions/`.
 
 | Function Name | Description | Possible Keys / Arguments | Dependencies | Language (Comments/Desc) |
 | :--- | :--- | :--- | :--- | :--- |
-| **rerlinks-cp** | Copy with `reflink=always` (Cow) (wrapper for `cp`). | `[source] [dest]` | N/A | Russian comments, English description |
+| **android_send** | Interactive file sending to Android via ADB. | Interactive | `adb` | Russian |
+| **check_bin** | Check if a binary exists in Arch Linux repos or AUR. | `<package_name>` | `pacman`, `paru` | English |
+| **check_remote_ssh_logs** | Monitor failed SSH login attempts on a remote server. | N/A | `ssh` | Russian |
 | **deluge_extract** | Extract `.torrent` files from Deluge state based on a download path. | `<search_path> [dest_dir]` | `deluge` | Mixed: Russian (Interface, source code comments) /  English (description) |
 | **deluge_extract2** | Advanced extraction of `.torrent` files by Path OR by Name. | `<search_term> [dest_dir]`, `--name` (`-n`) | `deluge` | Mixed: Russian (Interface, source code comments) /  English (description) |
 | **fedit** | Find and open a fish function using `fzf` and your preferred editor. | Interactive | `fzf`, `bat` (optional) | Mixed: English (main interface) /  Russian (source code comments, description and errors) |
@@ -56,6 +58,7 @@ Clone the repository and copy functions to `~/.config/fish/functions/`.
 | **frename** | Rename a fish function (both the file and the internal function name). | `<old_name> <new_name>` | N/A | Interface: N/A, Description/Source code comments: Russian |
 | **gdisk_mount** | Mount Google Drive using `rclone` (requires existing `gdrive` config). | N/A | `rclone` | English |
 | **get_root_cmd** | Safely detect root privilege command (`sudo`, `doas`, `run0` etc.) using a whitelist. | N/A | N/A | English description, Russian comments |
+| **git_check_updates** | Visual git history overview for all branches. | N/A | `git` | English |
 | **hardlinks-cp** | Recursive hardlink copy (safe wrapper for `cp -al`). | `<source> <dest>` | N/A | Russian |
 | **last_pkgs** | Show the list of most recently installed packages (Arch Linux). | `[limit]` | `expac` | Russian |
 | **mancat** | Output the content of a man page directly to the terminal (no pager). | `<man_page>` | N/A | Interface: N/A, Description/Source code comments: Russian |
@@ -68,24 +71,46 @@ Clone the repository and copy functions to `~/.config/fish/functions/`.
 | **nat_off4nas_iptables**| Disable NAT and clear `iptables` rules for internet sharing. | N/A | `iptables` | Russian |
 | **nvim** | Wrapper to run Neovim with `SHELL=/bin/bash` (compatibility fix). | `[args...]` | `neovim` | Interface: N/A, Description/Source code comments: Russian |
 | **paru_clean** | Clean `paru` (AUR helper) cache, keeping the last N versions. | `-k <N>`, `--deep`, `--deep-all` | `pacman-contrib`, `paru`, `git` | Russian |
+| **pass** | Smart password manager wrapper (auto-pull on modify + Vim). | `[args...]` | `pass`, `git` | English |
+| **record_system_audio** | Interactively record system audio output. | Interactive | `ffmpeg`, `fzf` | Russian |
+| **replace_audio_track** | Replace video audio track with fade-out effect. | `<video> <audio>` | `ffmpeg` | Russian |
+| **reflinks-cp** | Copy with `reflink=always` (Cow) (wrapper for `cp`). | `[source] [dest]` | N/A | Russian comments, English description |
 | **rm-if-empty** | Safely remove directory ONLY if it contains 0-byte files or empty directories. | `<target_dir>` | `find` | Russian comments, English description |
 | **rsync2nas_move** | Move files to NAS using `rsync` with `size-only` check. | `<source> <target>` | `rsync` | Russian |
 | **save_local_torrents**| Export loaded `.torrent` files from local Deluge with human-readable names. | `[dest_dir]` | `deluge` | Mixed: Russian (Interface, source code comments) /  English (description) |
 | **save_qr** | Generate a QR code and save it to a PNG file (uses `qrencode`). | `<filename> <text>` | `qrencode` | Russian code comments, English description |
+| **say-en-direct** | Speak English text from clipboard/args (Piper + choice). | `[text]` | `piper`, `fzf` | Russian |
+| **say-en-kokoro** | High-quality American English TTS (Kokoro Smart Context). | `[text]`, `--fast`, `--save`, `--play-and-save` | `uv`, `torch`, `kokoro` | English |
+| **say-ru** | Speak Russian text from clipboard/args (Wayland/X11). | `[text]` | `speech-dispatcher` | Russian |
+| **say-ru-betatest1-direct** | Russian TTS (Piper: Irina) with device selection. | `[text]` | `piper`, `fzf` | Russian |
+| **say-ru-correct-stress** | Russian TTS with automatic stress correction (VITS). | `[text]`, `--fast`, `--save`, `--play-and-save` | `uv`, `transformers`, `ruaccent` | Russian |
+| **say-ru-direct** | Speak Russian text from clipboard/args (Piper). | `[text]` | `piper` | Russian |
+| **say-stop** | Stop all current speech synthesis processes. | N/A | `speech-dispatcher` | English |
 | **show_qr** | Display a QR code directly in the terminal (ANSI UTF8). | `<text>` | `qrencode` | Russian code comments, English description |
 | **smart-mv** | "**Smart Move**": Safely move files handling recursion, duplicates, and name conflicts. | `file1 [file2...] <dest_dir>` | `rsync` | Russian |
 | **squash_manager** | Smartly manage SquashFS: create (optional encryption), mount, and umount. | `create [OPTIONS] <input> [output], mount <img/mnt>, umount <mnt>` | `squashfs-tools`, `cryptsetup` (for -e), `tar2sqfs` (for archives) | Mixed |
+| **super_shred** | Securely wipe files (3 passes + zeroing). | `<file>` | `shred` | Russian |
 | **test_ssh_speed** | Test SSH connection speed using `pv` (pipe viewer). | `<host>` | `pv`, `openssh` | Russian code comments, English description |
 | **sudo** | Wrapper for `sudo-rs` (Rust implementation) with fallback to standard sudo. | `[args...]` | `sudo-rs` (optional), `sudo` (standard) | Interface: N/A, Decription/source code comments:   Russian |
 | **sudo-switch-alias** | Toggle the `sudo` alias between the system `sudo` and `sudo-rs`. | N/A | `sudo-rs` (optional) | Russian |
+| **toggle_night_mode** | Toggle system night mode (Redshift/etc.). | N/A | N/A | Russian |
 | **update-grub** | Shortcut to update GRUB2 configuration (Ubuntu-style style command for Arch). | N/A | `grub` | Interface: N/A, Decription/source code comments:   Russian |
+| **update_all_git_repositories** | Update all git repositories in a directory. | `[path]`, `-q` | `git` | Russian |
+| **updates_rclone** | Check for updates to `rclone`. | N/A | `rclone` | English |
 | **which-versions** | Show all installed paths and versions for a specific program. | `<command>` | N/A | Russian |
+| **watermark_pro** | Add a watermark to video for YouTube (re-encoding). | `<video> <watermark>` | `ffmpeg` | Russian |
 | **yt-dlp-transcript** | Download subtitles/transcripts from YouTube using `yt-dlp`. | `[url]`, `--lang`, `--vtt`, `--text` | `yt-dlp` | Russian |
 | **zero-kelvin-store** | Zero-Kelvin Store: Freeze data to SquashFS and Unfreeze back. | `freeze`, `unfreeze`, `check`, `--encrypt`, `--use-cmp`, `--force-delete` | `squash_manager`, `rm-if-empty` | English |
 
 
-## How to test the new function
+## How to test the new functions
 
+### Russian (VITS + Stress Correction)
 ```fish
 say-ru-correct-stress "+Я горько пл+ачу, когда плач+у по сч+там за этот старинный з+амок, на дв+ерях которого висит огромный зам+ок. Это настоящая м+ука — пытаться испечь хлеб, когда закончилась пшеничная мука+."
+```
+
+### English (Kokoro Smart Context)
+```fish
+say-en-kokoro "The quick brown fox jumps over the lazy dog. How much wood would a woodchuck chuck if a woodchuck could chuck wood?"
 ```
