@@ -155,6 +155,13 @@ if all_audio:
         end
     end
 
+    # --- Surgical Correction of Pronunciation ---
+    # If you write "te+ar" (hole/to rip), we replace it with the homophone "tare".
+    # We leave the usual "tear" (a drop of water) as is.
+    set text_to_say (string replace -a "te+ar" "tare" "$text_to_say")
+    set text_to_say (string replace -a "Te+ar" "Tare" "$text_to_say")
+    # --------------------------------------
+
     if test -z "$text_to_say"
         set text_to_say "Clipboard is empty."
     end
