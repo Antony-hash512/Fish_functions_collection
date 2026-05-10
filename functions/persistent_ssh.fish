@@ -1,5 +1,6 @@
 function persistent_ssh --description 'Устанавливает SSH-соединение с автопереподключением при обрыве'
     set -l target $argv
+    echo "для завершения сессии используйте exit 0 вместо exit"
     
     while true
         ssh $target
