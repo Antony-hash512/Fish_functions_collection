@@ -48,6 +48,7 @@ After I sort the functions into subdirectories (categories), you also need to co
 
 | Function Name | Description | Possible Keys / Arguments | Dependencies | Language (Comments/Desc) |
 | :--- | :--- | :--- | :--- | :--- |
+| **add_subtitle_hint** | Add a subtitle hint overlay to a video (e.g., CC/Subtitle turn on prompt). | `<input> <output>` | `ffmpeg`, `magick` | Russian |
 | **android_send** | Interactive file sending to Android via ADB. | Interactive | `adb` | Russian |
 | **check_bin** | Check if a binary exists in Arch Linux repos or AUR. | `<package_name>` | `pacman`, `paru` | English |
 | **check_remote_ssh_logs** | Monitor failed SSH login attempts on a remote server. | N/A | `ssh` | Russian |
@@ -74,6 +75,7 @@ After I sort the functions into subdirectories (categories), you also need to co
 | **nvim** | Wrapper to run Neovim with `SHELL=/bin/bash` (compatibility fix). | `[args...]` | `neovim` | Interface: N/A, Description/Source code comments: Russian |
 | **paru_clean** | Clean `paru` (AUR helper) cache, keeping the last N versions. | `-k <N>`, `--deep`, `--deep-all` | `pacman-contrib`, `paru`, `git` | Russian |
 | **pass** | Smart password manager wrapper (auto-pull on modify + Vim). | `[args...]` | `pass`, `git` | English |
+| **persistent_ssh** | Establish an SSH connection with auto-reconnect on connection drop. | `[args...]` | `ssh` | Russian |
 | **record_system_audio** | Interactively record system audio output. | Interactive | `ffmpeg`, `fzf` | Russian |
 | **replace_audio_track** | Replace video audio track with fade-out effect. | `<video> <audio>` | `ffmpeg` | Russian |
 | **reflinks-cp** | Copy with `reflink=always` (Cow) (wrapper for `cp`). | `[source] [dest]` | N/A | Russian comments, English description |
@@ -91,6 +93,7 @@ After I sort the functions into subdirectories (categories), you also need to co
 | **show_qr** | Display a QR code directly in the terminal (ANSI UTF8). | `<text>` | `qrencode` | Russian code comments, English description |
 | **smart-mv** | "**Smart Move**": Safely move files handling recursion, duplicates, and name conflicts. | `file1 [file2...] <dest_dir>` | `rsync` | Russian |
 | **squash_manager** | Smartly manage SquashFS: create (optional encryption), mount, and umount. | `create [OPTIONS] <input> [output], mount <img/mnt>, umount <mnt>` | `squashfs-tools`, `cryptsetup` (for -e), `tar2sqfs` (for archives) | Mixed |
+| **squash_manager6** | Ultimate SquashFS manager: Supports RAM-build for max speed + Encryption. | `create [OPTIONS] <input> [output], mount <img/mnt>, umount <mnt>` | `squashfs-tools`, `cryptsetup` (for -e), `tar2sqfs` (for archives) | Mixed |
 | **super_shred** | Securely wipe files (3 passes + zeroing). | `<file>` | `shred` | Russian |
 | **test_ssh_speed** | Test SSH connection speed using `pv` (pipe viewer). | `<host>` | `pv`, `openssh` | Russian code comments, English description |
 | **sudo** | Wrapper for `sudo-rs` (Rust implementation) with fallback to standard sudo. | `[args...]` | `sudo-rs` (optional), `sudo` (standard) | Interface: N/A, Decription/source code comments:   Russian |
@@ -99,8 +102,9 @@ After I sort the functions into subdirectories (categories), you also need to co
 | **update-grub** | Shortcut to update GRUB2 configuration (Ubuntu-style style command for Arch). | N/A | `grub` | Interface: N/A, Decription/source code comments:   Russian |
 | **update_all_git_repositories** | Update all git repositories in a directory. | `[path]`, `-q` | `git` | Russian |
 | **updates_rclone** | Check for updates to `rclone`. | N/A | `rclone` | English |
-| **which-versions** | Show all installed paths and versions for a specific program. | `<command>` | N/A | Russian |
+| **upscale_video_realesrgan** | Upscale video using `realesrgan-ncnn-vulkan`. | `[options] <input> <output>` | `realesrgan-ncnn-vulkan`, `ffmpeg` | Russian |
 | **watermark_pro** | Add a watermark to video for YouTube (re-encoding). | `<video> <watermark>` | `ffmpeg` | Russian |
+| **which-versions** | Show all installed paths and versions for a specific program. | `<command>` | N/A | Russian |
 | **yt-dlp-transcript** | Download subtitles/transcripts from YouTube using `yt-dlp`. | `[url]`, `--lang`, `--vtt`, `--text` | `yt-dlp` | Russian |
 | **zero-kelvin-store** | Zero-Kelvin Store: Freeze data to SquashFS and Unfreeze back. | `freeze`, `unfreeze`, `check`, `--encrypt`, `--use-cmp`, `--force-delete` | `squash_manager`, `rm-if-empty` | English |
 
