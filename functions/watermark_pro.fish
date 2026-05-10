@@ -1,7 +1,14 @@
-function watermark_pro --description "Наложение вотермарка на видео для YouTube (с перекодировкой)"
+function watermark_pro --description "Наложение вотермарки на видео (с перекодировкой)"
     set -l options (fish_opt -s i -l input --required-val)
     set options $options (fish_opt -s w -l text --required-val)
-    
+
+    set -l crf 18
+    set -l fontfile "/usr/share/fonts/liberation/LiberationSans-Bold.ttf"
+    set -l font_proportion 20 # 36 для 720p
+    set -l font_color "white@0.4"
+    set -l border_color "black@0.7"
+    set -l border_width 3
+
     argparse $options -- $argv
     or return 1
 
@@ -12,7 +19,7 @@ function watermark_pro --description "Наложение вотермарка н
     end
 
     set -l input_file $_flag_input[1]
-    
+
     if not set -q _flag_text[1]
         # Если текст не указан, ставим значение по умолчанию. Можно поменять здесь.
         set -l _flag_text[1] "@My_Channel"
@@ -31,16 +38,23 @@ function watermark_pro --description "Наложение вотермарка н
     echo (set_color cyan)"====================="(set_color normal)
     echo "Пожалуйста, подождите, процесс может занять время..."
 
+    # Вычисляем ширину видео и размер шрифта (
+    set -l vid_width (video_resolution -w "$input_file")
+    if test -z "$vid_width"; or not string match -qr '^[0-9]+$' "$vid_width"
+        set vid_width 1280
+    end
+    set -l font_size (math "round($vid_width / $font_proportion)")
+
     # КОМАНДА FFMPEG С ПОЯСНЕНИЯМИ:
     # 1. -vf: Включаем видеофильтр.
     # 2. drawtext=...: Модуль для рисования текста.
     #    - text='%s': Берем текст из переменной.
     #    - x=w-tw-30:y=h-th-20: Позиция. 'w-tw-30' — ширина видео минус ширина текста минус 30 пикселей отступ (справа). 
     #       'h-th-20' — высота видео минус высота текста минус 20 пикселей (снизу).
-    #    - fontcolor=white@0.4: Цвет текста белый. Собачка и 0.4 — это прозрачность (40%).
-    #    - fontsize=36: Размер шрифта. Подходит для 720p/1080p.
-    #    - fontfile=/System/Library/Fonts/Cache/Menlo-Bold.ttf: ПУТЬ К ШРИФТУ. ОЧЕНЬ ВАЖНО. Это стандартный шрифт Menlo (моноширинный, красивый) на macOS.
-    #      ЕСЛИ ВЫ НА LINUX/WINDOWS, ЭТОТ ПУТЬ НУЖНО ИЗМЕНИТЬ на реальный (например, Arial.ttf или LiberationSans.ttf).
+    #    - fontcolor=$font_color: Цвет и прозрачность текста.
+    #    - fontsize=$font_size: Размер шрифта (динамически вычислен пропорционально ширине).
+    #    - fontfile=$fontfile: Путь к файлу шрифта.
+    #    - borderw=$border_width:bordercolor=$border_color: Толщина и цвет обводки текста.
     #
     # 3. ПАРАМЕТРЫ РЕКОДИНГА ДЛЯ YOUTUBE:
     #    - -c:v libx264: Используем самый совместимый кодек x264.
@@ -50,10 +64,10 @@ function watermark_pro --description "Наложение вотермарка н
     #    - -c:a aac -b:a 160k: Пережимаем аудио в хороший AAC (как в оригинале), чтобы YouTube точно "проглотил".
 
     ffmpeg -i "$input_file" \
-    -vf "drawtext=text='$watermark_text':x=w-tw-30:y=h-th-20:fontcolor=white@0.4:fontsize=36:fontfile=/usr/share/fonts/liberation/LiberationSans-Bold.ttf" \
-    -c:v libx264 -crf 20 -pix_fmt yuv420p -g 30 -profile:v high -level:v 3.1 \
-    -c:a aac -b:a 160k \
-    "$output_file"
+        -vf "drawtext=text='$watermark_text':x=w-tw-30:y=h-th-20:fontcolor=$font_color:fontsize=$font_size:fontfile=$fontfile:borderw=$border_width:bordercolor=$border_color" \
+        -c:v libx264 -crf $crf -pix_fmt yuv420p -g 30 -profile:v high -level:v 3.1 \
+        -c:a aac -b:a 160k \
+        "$output_file"
 
     if test $status -eq 0
         echo (set_color green)"√ Видео успешно создано: $output_file"(set_color normal)
