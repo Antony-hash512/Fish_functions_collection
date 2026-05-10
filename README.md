@@ -35,6 +35,8 @@ fisher install Antony-hash512/Fish_functions_collection
 
 Clone the repository and copy functions to `~/.config/fish/functions/`.
 
+After I sort the functions into subdirectories (categories), I also need to copy the script from my repository's `conf.d` to your `~/.config/fish/conf.d`.
+
 > **💡 Pro Tip:**
 > For granular control, use a visual diff tool (like **Meld** or **KDiff3**) to compare the cloned `functions/` directory against your local `~/.config/fish/functions/` and inspect individual files.
 >
