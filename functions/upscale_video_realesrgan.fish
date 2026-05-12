@@ -96,28 +96,38 @@ function upscale_video_realesrgan --description 'Upscale video using realesrgan-
     ffmpeg -loglevel error -stats -i $input_video "$frames_input_directory/frame_%08d.png"
 
     echo "[2/4] Апскейлим кадры через Vulkan..."
-    
-    # Считаем количество кадров
+
+    # Считаем количество входных кадров
     set -l total_frames (count $frames_input_directory/*.png)
     if test $total_frames -eq 0
         echo "Ошибка: Кадры не найдены в $frames_input_directory"
         return 1
     end
+    echo "       Всего кадров: $total_frames"
 
-    # Запускаем апскейлер с перехватом прогресса
-    # awk разбивает вывод по символу возврата каретки (\r) и сразу сбрасывает буфер (fflush),
-    # чтобы мы получали проценты в цикл read в реальном времени.
-    realesrgan-ncnn-vulkan -i $frames_input_directory -o $frames_output_directory -n $model_name -s $scale_factor -t $tile_size -j $thread_configuration -f png 2>&1 | awk -v RS='\r' '{print $0; fflush()}' | while read -l line
-        if string match -qr '[0-9.]+\%' -- $line
-            set -l percent (string match -r '[0-9.]+' -- $line)
-            set -l current_frame (math -s0 "round($total_frames * $percent / 100)")
-            printf "\r      Прогресс: %s%% (Кадр %s из %s)  " $percent $current_frame $total_frames
-        else if string match -qr '\S' -- $line
-            # Печатаем остальные непустые строки (информацию или ошибки утилиты)
-            echo "$line"
-        end
+    # Запускаем апскейлер в фоне
+    realesrgan-ncnn-vulkan -i $frames_input_directory -o $frames_output_directory -n $model_name -s $scale_factor -t $tile_size -j $thread_configuration -f png &>/dev/null &
+    set -l esrgan_pid $last_pid
+
+    # Мониторим прогресс, подсчитывая готовые кадры в папке frames_out
+    while kill -0 $esrgan_pid 2>/dev/null
+        set -l done_frames (find $frames_output_directory -maxdepth 1 -name '*.png' -type f 2>/dev/null | wc -l | string trim)
+        set -l percent (math -s1 "$done_frames * 100 / $total_frames")
+        printf "\r       Прогресс: %s%% (Кадр %s из %s)  " $percent $done_frames $total_frames
+        sleep 2
     end
-    echo "" # Перенос строки после завершения прогресса
+
+    # Финальный вывод (после завершения могут быть ещё не подсчитанные файлы)
+    set -l done_frames (find $frames_output_directory -maxdepth 1 -name '*.png' -type f 2>/dev/null | wc -l | string trim)
+    set -l percent (math -s1 "$done_frames * 100 / $total_frames")
+    printf "\r       Прогресс: %s%% (Кадр %s из %s)  \n" $percent $done_frames $total_frames
+
+    # Ждём завершения и проверяем код возврата
+    wait $esrgan_pid
+    if test $status -ne 0
+        echo "Ошибка: realesrgan-ncnn-vulkan завершился с ошибкой."
+        return 1
+    end
 
     echo "[3/4] Собираем видео и возвращаем звук..."
     ffmpeg -loglevel error -stats -framerate 24 -i "$frames_output_directory/frame_%08d.png" -i $input_video -map 0:v:0 -map 1:a:0? -c:v libx264 -crf 18 -pix_fmt yuv420p -c:a copy $ffmpeg_scale_filter $output_video
