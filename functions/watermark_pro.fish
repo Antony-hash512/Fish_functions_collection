@@ -5,7 +5,7 @@ function watermark_pro --description "Наложение вотермарки н
     set -l crf 18
     set -l fontfile "/usr/share/fonts/liberation/LiberationSans-Bold.ttf"
     set -l font_proportion 20 # 36 для 720p
-    set -l font_color "white@0.4"
+    set -l font_color "white@0.7"
     set -l border_color "black@0.7"
     set -l border_width 3
 
@@ -38,19 +38,37 @@ function watermark_pro --description "Наложение вотермарки н
     echo (set_color cyan)"====================="(set_color normal)
     echo "Пожалуйста, подождите, процесс может занять время..."
 
-    # Вычисляем ширину видео и размер шрифта (
+    # Вычисляем размеры видео и параметры шрифта/отступов
     set -l vid_width (video_resolution -w "$input_file")
+    set -l vid_height (video_resolution -h "$input_file")
+
     if test -z "$vid_width"; or not string match -qr '^[0-9]+$' "$vid_width"
         set vid_width 1280
+        set vid_height 720
     end
+
     set -l font_size (math "round($vid_width / $font_proportion)")
+
+    # Вычисляем отступы
+    # y = высота / 64
+    set -l offset_y (math "round($vid_height / 64)")
+
+    # --- Выравнивание по правому краю (закомментировано) ---
+    # Считаем стандартную ширину для соотношения 16:9
+    # set -l standard_width (math "round($vid_height * 16 / 9)")
+    # set -l extra_x 0
+    # if test $vid_width -gt $standard_width
+    #     # Размер одной черной полосы сбоку (половина того, что превышает 16:9)
+    #     set extra_x (math "round(($vid_width - $standard_width) / 2)")
+    # end
+    # # x = ширина / 24 + компенсация черной полосы
+    # set -l offset_x (math "round(($vid_width / 24) + ($extra_x * 2))")
 
     # КОМАНДА FFMPEG С ПОЯСНЕНИЯМИ:
     # 1. -vf: Включаем видеофильтр.
     # 2. drawtext=...: Модуль для рисования текста.
     #    - text='%s': Берем текст из переменной.
-    #    - x=w-tw-30:y=h-th-20: Позиция. 'w-tw-30' — ширина видео минус ширина текста минус 30 пикселей отступ (справа). 
-    #       'h-th-20' — высота видео минус высота текста минус 20 пикселей (снизу).
+    #    - x=(w-tw)/2:y=h-th-$offset_y: Позиция вотермарки (центр по горизонтали, отступ снизу).
     #    - fontcolor=$font_color: Цвет и прозрачность текста.
     #    - fontsize=$font_size: Размер шрифта (динамически вычислен пропорционально ширине).
     #    - fontfile=$fontfile: Путь к файлу шрифта.
@@ -58,13 +76,14 @@ function watermark_pro --description "Наложение вотермарки н
     #
     # 3. ПАРАМЕТРЫ РЕКОДИНГА ДЛЯ YOUTUBE:
     #    - -c:v libx264: Используем самый совместимый кодек x264.
-    #    - -crf 20: (Constant Rate Factor). Это качество. Диапазон от 0 (без сжатия) до 51. Значение 20 — это ОЧЕНЬ хорошее качество (для 720p). 23 — дефолт, 18 — визуально lossless.
-    #    - -pix_fmt yuv420p: Стандартная цветовая субдискретизация 4:2:0. Это критично для совместимости.
-    #    - -g 30: (Keyframe interval). YouTube рекомендует делать ключевой кадр каждые 1-2 секунды. При 30 fps это '-g 30'. Это ускорит обработку видео на их серверах.
-    #    - -c:a aac -b:a 160k: Пережимаем аудио в хороший AAC (как в оригинале), чтобы YouTube точно "проглотил".
+    #    - -crf $crf: Качество видео (Constant Rate Factor).
+    #    - -pix_fmt yuv420p: Стандартная цветовая субдискретизация для совместимости.
+    #    - -g 30: Интервал ключевых кадров (GOP). YouTube рекомендует делать его каждую секунду.
+    #    - -c:a aac -b:a 160k: Пережимаем аудио в качественный AAC 160k.
 
     ffmpeg -i "$input_file" \
-        -vf "drawtext=text='$watermark_text':x=w-tw-30:y=h-th-20:fontcolor=$font_color:fontsize=$font_size:fontfile=$fontfile:borderw=$border_width:bordercolor=$border_color" \
+        # -vf "drawtext=text='$watermark_text':x=w-tw-$offset_x:y=h-th-$offset_y:fontcolor=$font_color:fontsize=$font_size:fontfile=$fontfile:borderw=$border_width:bordercolor=$border_color" \
+        -vf "drawtext=text='$watermark_text':x=(w-tw)/2:y=h-th-$offset_y:fontcolor=$font_color:fontsize=$font_size:fontfile=$fontfile:borderw=$border_width:bordercolor=$border_color" \
         -c:v libx264 -crf $crf -pix_fmt yuv420p -g 30 -profile:v high -level:v 3.1 \
         -c:a aac -b:a 160k \
         "$output_file"

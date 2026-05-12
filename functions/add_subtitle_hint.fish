@@ -10,7 +10,7 @@ function add_subtitle_hint
 
     # Константы (настройки)
     set -l hint_start_time 0.1
-    set -l hint_end_time 5
+    set -l hint_end_time 6
 
     set -l crf 18
 
