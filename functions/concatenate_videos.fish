@@ -20,7 +20,7 @@ function concatenate_videos --description 'Бесшовное объединен
             return 1
         end
         # Записываем в формате, который понимает ffmpeg: file 'path/to/file'
-        echo "file '(realpath "$file")'" >> "$list_file"
+        printf "file '%s'\n" (realpath "$file") >> "$list_file"
     end
 
     echo "Склеиваем файлы в $output_file..."

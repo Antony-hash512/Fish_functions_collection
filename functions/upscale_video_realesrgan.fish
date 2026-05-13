@@ -34,8 +34,8 @@ function upscale_video_realesrgan --description 'Upscale video using realesrgan-
     end
 
     # Проверяем зависимости
-    if not type -q realesrgan-ncnn-vulkan; or not type -q ffmpeg
-        echo "Ошибка: Установите realesrgan-ncnn-vulkan и ffmpeg"
+    if not type -q realesrgan-ncnn-vulkan; or not type -q ffmpeg; or not type -q ffprobe
+        echo "Ошибка: Установите realesrgan-ncnn-vulkan, ffmpeg и ffprobe"
         return 1
     end
 
@@ -130,7 +130,10 @@ function upscale_video_realesrgan --description 'Upscale video using realesrgan-
     end
 
     echo "[3/4] Собираем видео и возвращаем звук..."
-    ffmpeg -loglevel error -stats -framerate 24 -i "$frames_output_directory/frame_%08d.png" -i $input_video -map 0:v:0 -map 1:a:0? -c:v libx264 -crf 18 -pix_fmt yuv420p -c:a copy $ffmpeg_scale_filter $output_video
+    # Получаем среднюю частоту кадров исходного видео
+    set -l fps (ffprobe -v error -select_streams v:0 -show_entries stream=avg_frame_rate -of default=noprint_wrappers=1:nokey=1 $input_video)
+    
+    ffmpeg -loglevel error -stats -framerate $fps -i "$frames_output_directory/frame_%08d.png" -i $input_video -map 0:v:0 -map 1:a:0? -c:v libx264 -crf 18 -pix_fmt yuv420p -c:a copy $ffmpeg_scale_filter $output_video
 
     if set -ql _flag_keep_tmp
         echo "[4/4] Временные файлы сохранены в $temporary_directory"
