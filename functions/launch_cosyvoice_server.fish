@@ -32,6 +32,8 @@ function launch_cosyvoice_server --description "Устанавливает, на
 
     echo "Запускаем сервер на http://127.0.0.1:50000 ..."
     set -x PYTHONPATH "third_party/Matcha-TTS"
+    # Магическая переменная для борьбы с нехваткой VRAM на 6 ГБ картах
+    set -x PYTORCH_CUDA_ALLOC_CONF "expandable_segments:True"
     uv run webui.py --port 50000 --model_dir $model_dir
     if false
         cd ~/git/CosyVoice
