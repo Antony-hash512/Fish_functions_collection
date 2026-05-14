@@ -1,5 +1,5 @@
 function upscale_video_realesrgan --description 'Upscale video using realesrgan-ncnn-vulkan'
-    argparse 'r/res=' 's/style=' 't/tmpdir=' k/keep-tmp h/help -- $argv
+    argparse 'r/res=' 's/style=' 't/tmpdir=' k/keep-tmp h/help 'start=' 'end=' -- $argv
     or return 1
 
     if set -ql _flag_help
@@ -8,6 +8,8 @@ function upscale_video_realesrgan --description 'Upscale video using realesrgan-
         echo "  -r, --res        Разрешение: 1080p, 2k, 4k (по умолчанию: 2k)"
         echo "  -s, --style      Стиль: anime, photo (по умолчанию: anime)"
         echo "  -t, --tmpdir     Кастомная временная директория"
+        echo "  --start          Номер начального кадра (например: 240)"
+        echo "  --end            Номер конечного кадра (например: 600)"
         echo "  -k, --keep-tmp   Не удалять временные файлы после работы"
         echo "  -h, --help       Показать эту справку"
         return 0
@@ -93,7 +95,19 @@ function upscale_video_realesrgan --description 'Upscale video using realesrgan-
     mkdir -p $frames_input_directory $frames_output_directory
 
     echo "[1/4] Извлекаем кадры из $input_video..."
-    ffmpeg -loglevel error -stats -i $input_video "$frames_input_directory/frame_%08d.png"
+    # Конфигурация диапазона кадров
+    set -l select_args
+    if set -ql _flag_start; and set -ql _flag_end
+        set -a select_args -vf "select='between(n,$_flag_start,$_flag_end)'" -vsync vfr
+        echo "Диапазон кадров: с $_flag_start по $_flag_end"
+    else if set -ql _flag_start
+        set -a select_args -vf "select='gte(n,$_flag_start)'" -vsync vfr
+        echo "Диапазон кадров: с $_flag_start и до конца"
+    else if set -ql _flag_end
+        set -a select_args -vf "select='lte(n,$_flag_end)'" -vsync vfr
+        echo "Диапазон кадров: с начала и по $_flag_end"
+    end
+    ffmpeg -loglevel error -stats -i $input_video $select_args "$frames_input_directory/frame_%08d.png"
 
     echo "[2/4] Апскейлим кадры через Vulkan..."
 
@@ -132,8 +146,8 @@ function upscale_video_realesrgan --description 'Upscale video using realesrgan-
     echo "[3/4] Собираем видео и возвращаем звук..."
     # Получаем среднюю частоту кадров исходного видео
     set -l fps (ffprobe -v error -select_streams v:0 -show_entries stream=avg_frame_rate -of default=noprint_wrappers=1:nokey=1 $input_video)
-    
-    ffmpeg -loglevel error -stats -framerate $fps -i "$frames_output_directory/frame_%08d.png" -i $input_video -map 0:v:0 -map 1:a:0? -c:v libx264 -crf 18 -pix_fmt yuv420p -c:a copy $ffmpeg_scale_filter $output_video
+
+    ffmpeg -loglevel error -stats -framerate $fps -i "$frames_output_directory/frame_%08d.png" -i $input_video -map 0:v:0 -map 1:a:0? -c:v hevc_nvenc -cq 18 -preset slow -g 48 -bf 3 -pix_fmt yuv420p -c:a copy $ffmpeg_scale_filter $output_video
 
     if set -ql _flag_keep_tmp
         echo "[4/4] Временные файлы сохранены в $temporary_directory"
