@@ -2,7 +2,7 @@ function watermark_pro --description "Наложение вотермарки н
     set -l options (fish_opt -s i -l input --required-val)
     set options $options (fish_opt -s w -l text --required-val)
 
-    set -l crf 18
+    set -l cq 18 # Качество для hevc_nvenc (аналог CRF, 0=лучшее, 51=худшее)
     set -l fontfile "/usr/share/fonts/liberation/LiberationSans-Bold.ttf"
     set -l font_proportion 20 # 36 для 720p
     set -l font_color "white@0.7"
@@ -74,17 +74,17 @@ function watermark_pro --description "Наложение вотермарки н
     #    - fontfile=$fontfile: Путь к файлу шрифта.
     #    - borderw=$border_width:bordercolor=$border_color: Толщина и цвет обводки текста.
     #
-    # 3. ПАРАМЕТРЫ РЕКОДИНГА ДЛЯ YOUTUBE:
-    #    - -c:v libx264: Используем самый совместимый кодек x264.
-    #    - -crf $crf: Качество видео (Constant Rate Factor).
-    #    - -pix_fmt yuv420p: Стандартная цветовая субдискретизация для совместимости.
-    #    - -g 30: Интервал ключевых кадров (GOP). YouTube рекомендует делать его каждую секунду.
+    # 3. ПАРАМЕТРЫ РЕКОДИНГА:
+    #    - -c:v hevc_nvenc: HEVC кодирование через GPU NVIDIA (как у исходника).
+    #    - -cq $cq: Качество (Constant Quality для nvenc, аналог CRF).
+    #    - -pix_fmt yuv420p: Стандартная цветовая субдискретизация.
+    #    - -g 30: Интервал ключевых кадров (GOP = 1 сек при 30fps).
     #    - -c:a aac -b:a 160k: Пережимаем аудио в качественный AAC 160k.
 
     ffmpeg -i "$input_file" \
         # -vf "drawtext=text='$watermark_text':x=w-tw-$offset_x:y=h-th-$offset_y:fontcolor=$font_color:fontsize=$font_size:fontfile=$fontfile:borderw=$border_width:bordercolor=$border_color" \
         -vf "drawtext=text='$watermark_text':x=(w-tw)/2:y=h-th-$offset_y:fontcolor=$font_color:fontsize=$font_size:fontfile=$fontfile:borderw=$border_width:bordercolor=$border_color" \
-        -c:v libx264 -crf $crf -pix_fmt yuv420p -g 30 -profile:v high -level:v 3.1 \
+        -c:v hevc_nvenc -cq $cq -pix_fmt yuv420p -g 30 \
         -c:a aac -b:a 160k \
         "$output_file"
 

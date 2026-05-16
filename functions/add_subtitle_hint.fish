@@ -12,7 +12,7 @@ function add_subtitle_hint
     set -l hint_start_time 0.1
     set -l hint_end_time 6
 
-    set -l crf 18
+    set -l cq 18  # Constant Quality для hevc_nvenc (аналог CRF)
 
     # Вычисляем ширину видео
     set -l vid_width (video_resolution -w "$input")
@@ -49,7 +49,7 @@ function add_subtitle_hint
     # они будут занимать чуть больше места вниз.
     ffmpeg -i "$input" -i $hint_img -filter_complex \
         "[0:v][1:v] overlay=(W-w)/2:h*0.08:enable='between(t,$hint_start_time,$hint_end_time)'" \
-        -c:v libx264 -crf $crf -c:a copy "$output"
+        -c:v hevc_nvenc -cq $cq -pix_fmt yuv420p -c:a copy "$output"
 
     # Чистим временный файл
     if test -f "$hint_img"
