@@ -70,6 +70,7 @@ After I sort the functions into subdirectories (categories), you also need to co
 | **mancat** | Output the content of a man page directly to the terminal (no pager). | `<man_page>` | N/A | Interface: N/A, Description/Source code comments: Russian |
 | **mancopy** | Copy the content of a man page to the system clipboard. | `<man_page>` | `wl-clipboard` (Wayland) or `xsel` (X11) | Interface: N/A, Description/Source code comments: Russian |
 | **merge_image_sequences** | Merge multiple folders containing PNG image frames into a single continuous sequence using hard links. | `[options] <folder1> <folder2> ...` | N/A | Russian |
+| **migrate_antigravity_settings** | Migrate user settings and plugins to standard Antigravity IDE configuration directories. | N/A | N/A | Russian |
 | **mount-remote-dir-by-rclone** | Mount remote directories using `rclone` (interactive wizard available). | `[up/down/list/forget]` | `rclone`, `get_root_cmd` (function) | Mixed |
 | **mount-remote-dir-by-smb** | Mount remote SMB/CIFS shares (interactive wizard available). | `[up/down/list/forget]` | `cifs-utils`, `get_root_cmd` (function) | Mixed |
 | **mount-remote-dir-by-webdav** | Mount remote WebDAV directories (davfs2) (interactive wizard available). | `[up/down/list/forget]` | `davfs2`, `get_root_cmd` (function) | Mixed |
