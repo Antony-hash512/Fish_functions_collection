@@ -44,50 +44,14 @@ function video_resolution --description "Выводит разрешение в�
     if test $output_something -eq 0
         set -l res (ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 "$file")
         switch "$res"
-            case 12288x6912
-                echo "$res (12K UHD 16:9)"
-            case 6912x12288
-                echo "$res (12K UHD 9:16)"
-            case 11520x6480
-                echo "$res (12K 16:9)"
-            case 6480x11520
-                echo "$res (12K 9:16)"
             case 7680x4320
                 echo "$res (8K 16:9)"
             case 4320x7680
                 echo "$res (8K 9:16)"
-            case 6144x3456
-                echo "$res (6K 16:9)"
-            case 3456x6144
-                echo "$res (6K 9:16)"
-            case 6016x3384
-                echo "$res (6K 16:9)"
-            case 3384x6016
-                echo "$res (6K 9:16)"
-            case 5760x3240
-                echo "$res (6K 16:9)"
-            case 3240x5760
-                echo "$res (6K 9:16)"
-            case 5120x2880
-                echo "$res (5K 16:9)"
-            case 2880x5120
-                echo "$res (5K 9:16)"
             case 3840x2160
                 echo "$res (4K UHD 16:9)"
             case 2160x3840
                 echo "$res (4K UHD 9:16)"
-            case 3200x1800
-                echo "$res (3K 16:9)"
-            case 1800x3200
-                echo "$res (3K 9:16)"
-            case 3072x1728
-                echo "$res (3K 16:9)"
-            case 1728x3072
-                echo "$res (3K 9:16)"
-            case 2880x1620
-                echo "$res (3K 16:9)"
-            case 1620x2880
-                echo "$res (3K 9:16)"
             case 2560x1440
                 echo "$res (2K 16:9)"
             case 1440x2560

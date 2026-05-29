@@ -1,13 +1,12 @@
 function watermark_pro --description "Наложение вотермарки на видео (с перекодировкой)"
     set -l options (fish_opt -s i -l input --required-val)
     set options $options (fish_opt -s w -l text --required-val)
-
-    set -l cq 18 # Качество для hevc_nvenc (аналог CRF, 0=лучшее, 51=худшее)
-    set -l fontfile "/usr/share/fonts/liberation/LiberationSans-Bold.ttf"
-    set -l font_proportion 20 # 36 для 720p
-    set -l font_color "white@0.7"
-    set -l border_color "black@0.7"
-    set -l border_width 3
+    set options $options (fish_opt -l glow)
+    set options $options (fish_opt -l glow-color --required-val)
+    set options $options (fish_opt -l color --required-val)
+    set options $options (fish_opt -l border-color --required-val)
+    set options $options (fish_opt -l border-size --required-val)
+    set options $options (fish_opt -l font --required-val)
 
     argparse $options -- $argv
     or return 1
@@ -21,10 +20,46 @@ function watermark_pro --description "Наложение вотермарки н
     set -l input_file $_flag_input[1]
 
     if not set -q _flag_text[1]
-        # Если текст не указан, ставим значение по умолчанию. Можно поменять здесь.
         set -l _flag_text[1] "@My_Channel"
     end
     set -l watermark_text $_flag_text[1]
+
+    # --- БАЗОВЫЕ НАСТРОЙКИ ---
+    set -l cq 18
+    set -l fontfile "/usr/share/fonts/liberation/LiberationSans-Bold.ttf"
+    if set -q _flag_font[1]
+        switch (string lower $_flag_font[1])
+            case orbitron
+                set fontfile "/home/fireice/.local/share/fonts/Orbitron-VariableFont_wght.ttf"
+            case michroma
+                set fontfile "/home/fireice/.local/share/fonts/Michroma-Regular.ttf"
+            case '*'
+                set fontfile $_flag_font[1]
+        end
+    end
+
+    set -l font_proportion 20
+
+    set -l font_color "white@0.4"
+    if set -q _flag_color[1]
+        set font_color $_flag_color[1]
+    end
+
+    set -l border_color "black@0.4"
+    if set -q _flag_border_color[1]
+        set border_color $_flag_border_color[1]
+    end
+
+    set -l border_width 3
+    if set -q _flag_border_size[1]
+        set border_width $_flag_border_size[1]
+    end
+
+    # --- НАСТРОЙКИ СВЕЧЕНИЯ ---
+    set -l glow_color 0xFF00FF # Неоново-розовый
+    if set -q _flag_glow_color[1]
+        set glow_color $_flag_glow_color[1]
+    end
 
     set -l filename (basename "$input_file" | sed 's/\.[^.]*$//')
     set -l output_file "$filename-watermarked.mp4"
@@ -53,27 +88,37 @@ function watermark_pro --description "Наложение вотермарки н
     # y = высота / 64
     set -l offset_y (math "round($vid_height / 64)")
 
-    # --- Выравнивание по правому краю (закомментировано) ---
-    # Считаем стандартную ширину для соотношения 16:9
-    # set -l standard_width (math "round($vid_height * 16 / 9)")
-    # set -l extra_x 0
-    # if test $vid_width -gt $standard_width
-    #     # Размер одной черной полосы сбоку (половина того, что превышает 16:9)
-    #     set extra_x (math "round(($vid_width - $standard_width) / 2)")
-    # end
-    # # x = ширина / 24 + компенсация черной полосы
-    # set -l offset_x (math "round(($vid_width / 24) + ($extra_x * 2))")
+    # --- ФОРМИРУЕМ СЛОИ ТЕКСТА ---
+    # Базовая позиция и шрифт, чтобы не дублировать код
+    set -l text_base "text='$watermark_text':x=(w-tw)/2:y=h-th-$offset_y:fontsize=$font_size:fontfile=$fontfile"
+
+    set -l vf_chain ""
+
+    if set -q _flag_glow
+        # --- НАСТРОЙКИ СВЕЧЕНИЯ ---
+        set -l glow_width_1 14 # Широкий радиус
+        set -l glow_opacity_1 0.15 # Слабая видимость
+        set -l glow_width_2 6 # Узкий радиус ближе к тексту
+        set -l glow_opacity_2 0.45 # Более плотный цвет
+
+        # Слой 1 (Дальнее свечение): прозрачное тело текста (white@0), толстая обводка цвета glow
+        set -l layer_glow_outer "drawtext=$text_base:fontcolor=white@0:borderw=$glow_width_1:bordercolor=$glow_color@$glow_opacity_1"
+
+        # Слой 2 (Ближнее свечение): прозрачное тело текста, средняя обводка
+        set -l layer_glow_inner "drawtext=$text_base:fontcolor=white@0:borderw=$glow_width_2:bordercolor=$glow_color@$glow_opacity_2"
+
+        # Слой 3 (Сам текст): белый текст, обводка для читаемости
+        set -l layer_main_text "drawtext=$text_base:fontcolor=$font_color:borderw=$border_width:bordercolor=$border_color"
+
+        # Склеиваем слои
+        set vf_chain "$layer_glow_outer, $layer_glow_inner, $layer_main_text"
+    else
+        # Обычный текст без свечения
+        set vf_chain "drawtext=$text_base:fontcolor=$font_color:borderw=$border_width:bordercolor=$border_color"
+    end
 
     # КОМАНДА FFMPEG С ПОЯСНЕНИЯМИ:
     # 1. -vf: Включаем видеофильтр.
-    # 2. drawtext=...: Модуль для рисования текста.
-    #    - text='%s': Берем текст из переменной.
-    #    - x=(w-tw)/2:y=h-th-$offset_y: Позиция вотермарки (центр по горизонтали, отступ снизу).
-    #    - fontcolor=$font_color: Цвет и прозрачность текста.
-    #    - fontsize=$font_size: Размер шрифта (динамически вычислен пропорционально ширине).
-    #    - fontfile=$fontfile: Путь к файлу шрифта.
-    #    - borderw=$border_width:bordercolor=$border_color: Толщина и цвет обводки текста.
-    #
     # 3. ПАРАМЕТРЫ РЕКОДИНГА:
     #    - -c:v hevc_nvenc: HEVC кодирование через GPU NVIDIA (как у исходника).
     #    - -cq $cq: Качество (Constant Quality для nvenc, аналог CRF).
@@ -82,8 +127,7 @@ function watermark_pro --description "Наложение вотермарки н
     #    - -c:a aac -b:a 160k: Пережимаем аудио в качественный AAC 160k.
 
     ffmpeg -i "$input_file" \
-        # -vf "drawtext=text='$watermark_text':x=w-tw-$offset_x:y=h-th-$offset_y:fontcolor=$font_color:fontsize=$font_size:fontfile=$fontfile:borderw=$border_width:bordercolor=$border_color" \
-        -vf "drawtext=text='$watermark_text':x=(w-tw)/2:y=h-th-$offset_y:fontcolor=$font_color:fontsize=$font_size:fontfile=$fontfile:borderw=$border_width:bordercolor=$border_color" \
+        -vf "$vf_chain" \
         -c:v hevc_nvenc -cq $cq -pix_fmt yuv420p -g 30 \
         -c:a aac -b:a 160k \
         "$output_file"

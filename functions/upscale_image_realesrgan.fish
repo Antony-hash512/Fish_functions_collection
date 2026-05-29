@@ -35,8 +35,26 @@ function upscale_image_realesrgan -d "Upscale a single image using Real-ESRGAN w
     # Пробрасываем переменную $model_name во флаг -n
     realesrgan-ncnn-vulkan -i $input_file -o $output_file -n $model_name -s 4
 
-    echo "Подгоняем размер под 1056x1872 для ComfyUI..."
-    magick $output_file -resize 1056x1872\! $output_file
+    # Определяем ориентацию картинки
+    set -l is_horizontal false
+    set -l width (video_resolution -w "$input_file" 2>/dev/null)
+    set -l height (video_resolution -h "$input_file" 2>/dev/null)
+    if test -z "$width"; or test -z "$height"
+        set width (identify -format "%w" "$input_file" 2>/dev/null)
+        set height (identify -format "%h" "$input_file" 2>/dev/null)
+    end
+    
+    if test -n "$width"; and test -n "$height"; and test $width -gt $height
+        set is_horizontal true
+    end
+
+    if test $is_horizontal = true
+        echo "Подгоняем размер под 1872x1056 для ComfyUI (горизонтальное)..."
+        magick $output_file -resize 1872x1056\! $output_file
+    else
+        echo "Подгоняем размер под 1056x1872 для ComfyUI (вертикальное)..."
+        magick $output_file -resize 1056x1872\! $output_file
+    end
     
     echo "Готово! Кадр можно грузить в ноду."
 end

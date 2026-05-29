@@ -79,6 +79,37 @@ function upscale_video_realesrgan --description 'Upscale video using realesrgan-
             return 1
     end
 
+    # Определяем ориентацию (горизонтальная или вертикальная)
+    set -l is_horizontal false
+    set -l probe_target
+    if test $frames_mode = true
+        set -l source_frames_dir $_flag_frames_dir
+        # Ищем первый попавшийся png кадр
+        set probe_target (find $source_frames_dir -maxdepth 1 -name '*.png' -type f | head -n 1)
+    else
+        set probe_target $input_video
+    end
+
+    if test -n "$probe_target"; and test -f "$probe_target"
+        set -l width (video_resolution -w "$probe_target" 2>/dev/null)
+        set -l height (video_resolution -h "$probe_target" 2>/dev/null)
+        if test -z "$width"; or test -z "$height"
+            set width (ffprobe -v error -select_streams v:0 -show_entries stream=width -of csv=p=0 "$probe_target" 2>/dev/null)
+            set height (ffprobe -v error -select_streams v:0 -show_entries stream=height -of csv=p=0 "$probe_target" 2>/dev/null)
+        end
+
+        if test -n "$width"; and test -n "$height"
+            if test $width -gt $height
+                set is_horizontal true
+                echo "Определена ориентация: Горизонтальная (альбомная) [$width x $height]"
+            else
+                echo "Определена ориентация: Вертикальная (портретная) [$width x $height]"
+            end
+        else
+            echo "Предупреждение: Не удалось определить разрешение, по умолчанию используем вертикальную ориентацию."
+        end
+    end
+
     # Конфигурация разрешения
     set -l scale_factor
     set -l tile_size
@@ -90,23 +121,38 @@ function upscale_video_realesrgan --description 'Upscale video using realesrgan-
             set scale_factor 2
             set tile_size 512
             set thread_configuration "2:2:2"
-            set ffmpeg_scale_filter -vf "scale=-2:1920"
+            if test $is_horizontal = true
+                set ffmpeg_scale_filter -vf "scale=1920:-2"
+            else
+                set ffmpeg_scale_filter -vf "scale=-2:1920"
+            end
         case 2k
             set scale_factor 2
             set tile_size 512
             set thread_configuration "2:2:2"
-            # Для 2k (вертикальное 1440x2560)
-            set ffmpeg_scale_filter -vf "scale=-2:2560"
+            if test $is_horizontal = true
+                set ffmpeg_scale_filter -vf "scale=2560:-2"
+            else
+                set ffmpeg_scale_filter -vf "scale=-2:2560"
+            end
         case 4k
             set scale_factor 4
             set tile_size 256
             set thread_configuration "1:2:2"
-            set ffmpeg_scale_filter -vf "scale=-2:3840"
+            if test $is_horizontal = true
+                set ffmpeg_scale_filter -vf "scale=3840:-2"
+            else
+                set ffmpeg_scale_filter -vf "scale=-2:3840"
+            end
         case 5k
             set scale_factor 4
             set tile_size 256
             set thread_configuration "1:2:2"
-            set ffmpeg_scale_filter -vf "scale=-2:5120"
+            if test $is_horizontal = true
+                set ffmpeg_scale_filter -vf "scale=5120:-2"
+            else
+                set ffmpeg_scale_filter -vf "scale=-2:5120"
+            end
         case '*'
             echo "Ошибка: Неизвестное разрешение '$resolution'. Доступные разрешения: 1080p, 2k, 4k, 5k."
             return 1
@@ -202,8 +248,9 @@ function upscale_video_realesrgan --description 'Upscale video using realesrgan-
         echo "[2/3] Апскейлим кадры через Vulkan..."
         echo "       Всего кадров: $total_frames"
 
-        # Запускаем апскейлер в фоне
-        realesrgan-ncnn-vulkan -i $upscale_input_dir -o $frames_output_directory -n $model_name -s $scale_factor -t $tile_size -j $thread_configuration -f png &>/dev/null &
+        # Запускаем апскейлер в фоне, логируя ошибки во временный файл
+        set -l esrgan_log "$temporary_directory/realesrgan_stderr.log"
+        realesrgan-ncnn-vulkan -i $upscale_input_dir -o $frames_output_directory -n $model_name -s $scale_factor -t $tile_size -j $thread_configuration -f png 2>$esrgan_log >/dev/null &
         set -l esrgan_pid $last_pid
 
         # Мониторим прогресс
@@ -230,7 +277,12 @@ function upscale_video_realesrgan --description 'Upscale video using realesrgan-
         end
 
         if test $esrgan_status -ne 0
-            echo "Ошибка: realesrgan-ncnn-vulkan завершился с ошибкой."
+            echo "Ошибка: realesrgan-ncnn-vulkan завершился с ошибкой (код $esrgan_status)."
+            if test -f $esrgan_log
+                echo "--- ЛОГ ОШИБОК РАБОТЫ АПСКЕЙЛЕРА ---"
+                cat $esrgan_log
+                echo "-------------------------------------"
+            end
             return 1
         end
 
@@ -281,8 +333,9 @@ function upscale_video_realesrgan --description 'Upscale video using realesrgan-
         end
         echo "       Всего кадров: $total_frames"
 
-        # Запускаем апскейлер в фоне
-        realesrgan-ncnn-vulkan -i $frames_input_directory -o $frames_output_directory -n $model_name -s $scale_factor -t $tile_size -j $thread_configuration -f png &>/dev/null &
+        # Запускаем апскейлер в фоне, логируя ошибки во временный файл
+        set -l esrgan_log "$temporary_directory/realesrgan_stderr.log"
+        realesrgan-ncnn-vulkan -i $frames_input_directory -o $frames_output_directory -n $model_name -s $scale_factor -t $tile_size -j $thread_configuration -f png 2>$esrgan_log >/dev/null &
         set -l esrgan_pid $last_pid
 
         # Мониторим прогресс, подсчитывая готовые кадры в папке frames_out
@@ -300,8 +353,14 @@ function upscale_video_realesrgan --description 'Upscale video using realesrgan-
 
         # Ждём завершения и проверяем код возврата
         wait $esrgan_pid
-        if test $status -ne 0
-            echo "Ошибка: realesrgan-ncnn-vulkan завершился с ошибкой."
+        set -l esrgan_status $status
+        if test $esrgan_status -ne 0
+            echo "Ошибка: realesrgan-ncnn-vulkan завершился с ошибкой (код $esrgan_status)."
+            if test -f $esrgan_log
+                echo "--- ЛОГ ОШИБОК РАБОТЫ АПСКЕЙЛЕРА ---"
+                cat $esrgan_log
+                echo "-------------------------------------"
+            end
             return 1
         end
 
