@@ -66,7 +66,7 @@ function watermark_pro --description "Наложение вотермарки н
     set -l timestamp (date +%H%M%S)
 
     echo (set_color cyan)"====================="(set_color normal)
-    echo (set_color bold)"Начинаем наложение вотермарка."(set_color normal)
+    echo (set_color -o)"Начинаем наложение вотермарка."(set_color normal)
     echo (set_color green)"Входной файл: "(set_color normal)"$input_file"
     echo (set_color green)"Текст вотермарка: "(set_color normal)"$watermark_text"
     echo (set_color green)"Промежуточный файл: "(set_color normal)"$output_file"

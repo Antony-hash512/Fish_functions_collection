@@ -12,7 +12,7 @@ function add_subtitle_hint
     set -l hint_start_time 0.1
     set -l hint_end_time 6
 
-    set -l cq 18  # Constant Quality для hevc_nvenc (аналог CRF)
+    set -l cq 18 # Constant Quality для hevc_nvenc (аналог CRF)
 
     # Вычисляем ширину видео
     set -l vid_width (video_resolution -w "$input")
