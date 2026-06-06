@@ -116,93 +116,93 @@ function video_resolution --description "Выводит разрешение в�
                     # Resolution standard label detection
                     set -l label ""
                     if test $max_dim -ge 15000
-                        set label "16K"
+                        set label 16K
                     else if test $max_dim -ge 10000
-                        set label "10K"
+                        set label 10K
                     else if test $max_dim -ge 7600
-                        set label "8K"
+                        set label 8K
                     else if test $max_dim -ge 5800
-                        set label "6K"
+                        set label 6K
                     else if test $max_dim -ge 5000
-                        set label "5K"
+                        set label 5K
                     else if test $max_dim -ge 3800
                         if test $max_dim -eq 3840
                             set label "4K UHD"
                         else if test $max_dim -eq 4096
                             set label "4K DCI"
                         else
-                            set label "4K"
+                            set label 4K
                         end
                     else if test $max_dim -ge 3400
                         if test $max_dim -eq 3440 -a $min_dim -eq 1440
-                            set label "UWQHD"
+                            set label UWQHD
                         else
-                            set label "3K"
+                            set label 3K
                         end
                     else if test $max_dim -ge 2800
-                        set label "3K"
+                        set label 3K
                     else if test $max_dim -ge 2000
                         if test $max_dim -eq 2560
                             if test "$aspect" = "21:9" -o "$aspect" = "9:21"
-                                set label "UWFHD"
+                                set label UWFHD
                             else if test "$aspect" = "16:9" -o "$aspect" = "9:16"
-                                set label "2K"
+                                set label 2K
                             else if test "$aspect" = "16:10" -o "$aspect" = "10:16"
-                                set label "WQXGA"
+                                set label WQXGA
                             else
-                                set label "QHD"
+                                set label QHD
                             end
                         else if test $max_dim -eq 2048
                             set label "2K DCI"
                         else
-                            set label "2K"
+                            set label 2K
                         end
                     else if test $max_dim -ge 1900
                         if test "$aspect" = "16:9" -o "$aspect" = "9:16"
-                            set label "FHD"
+                            set label FHD
                         else if test "$aspect" = "16:10" -o "$aspect" = "10:16"
-                            set label "WUXGA"
+                            set label WUXGA
                         else
-                            set label "1080p"
+                            set label 1080p
                         end
                     else if test $max_dim -ge 1600
                         if test $max_dim -eq 1680 -a $min_dim -eq 1050
                             set label "WSXGA+"
                         else if test $max_dim -eq 1600 -a $min_dim -eq 1200
-                            set label "UXGA"
+                            set label UXGA
                         else
-                            set label "900p"
+                            set label 900p
                         end
                     else if test $max_dim -ge 1360
                         if test $max_dim -eq 1440 -a $min_dim -eq 900
                             set label "WXGA+"
                         else
-                            set label "768p"
+                            set label 768p
                         end
                     else if test $max_dim -ge 1280
                         if test "$aspect" = "16:9" -o "$aspect" = "9:16"
-                            set label "HD"
+                            set label HD
                         else if test "$aspect" = "16:10" -o "$aspect" = "10:16"
-                            set label "WXGA"
+                            set label WXGA
                         else
-                            set label "720p"
+                            set label 720p
                         end
                     else if test $max_dim -ge 960
-                        set label "qHD"
+                        set label qHD
                     else if test $max_dim -ge 800
                         if test $max_dim -eq 800 -a $min_dim -eq 600
-                            set label "SVGA"
+                            set label SVGA
                         else
-                            set label "480p"
+                            set label 480p
                         end
                     else if test $max_dim -ge 640
                         if test $max_dim -eq 640 -a $min_dim -eq 480
-                            set label "VGA"
+                            set label VGA
                         else
-                            set label "480p"
+                            set label 480p
                         end
                     else if test $min_dim -eq 480 -o $min_dim -eq 576
-                        set label "SD"
+                        set label SD
                     end
 
                     # Format the output nicely

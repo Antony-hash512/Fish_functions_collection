@@ -1,16 +1,18 @@
 function upscale_video_realesrgan --description 'Upscale video using realesrgan-ncnn-vulkan'
-    argparse 'r/res=' 's/style=' 't/tmpdir=' k/keep-tmp h/help 'start=' 'end=' 'frames-dir=' 'fps=' 'audio=' -- $argv
+    argparse 'r/res=' 's/style=' 't/tmpdir=' k/keep-tmp h/help 'start=' 'end=' 'frames-dir=' 'fps=' 'audio=' 'gpu=' 2/2x -- $argv
     or return 1
 
     if set -ql _flag_help
         echo "Использование: upscale_video_realesrgan [опции] <входящее_видео> <исходящее_видео>"
         echo "Опции:"
-        echo "  -r, --res        Разрешение: 1080p, 2k, 4k, 5k (по умолчанию: 2k)"
+        echo "  -r, --res        Разрешение: 720p, 1080p, 2k, 4k, 5k (по умолчанию: 2k)"
         echo "  -s, --style      Стиль: anime, photo (по умолчанию: anime)"
         echo "  -t, --tmpdir     Кастомная временная директория"
         echo "  --start          Номер начального кадра (например: 240)"
         echo "  --end            Номер конечного кадра (например: 600)"
         echo "  -k, --keep-tmp   Не удалять временные файлы после работы"
+        echo "  --gpu            Выбор GPU: 0 — список, N — номер GPU (без флага — авто)"
+        echo "  -2, --2x         Принудительно использовать scale_factor 2 (вместо 4)"
         echo "  -h, --help       Показать эту справку"
         echo ""
         echo "Режим сборки из кадров (без извлечения из видео):"
@@ -82,6 +84,9 @@ function upscale_video_realesrgan --description 'Upscale video using realesrgan-
     # Определяем ориентацию (горизонтальная или вертикальная)
     set -l is_horizontal false
     set -l probe_target
+    set -l width
+    set -l height
+
     if test $frames_mode = true
         set -l source_frames_dir $_flag_frames_dir
         # Ищем первый попавшийся png кадр
@@ -91,8 +96,8 @@ function upscale_video_realesrgan --description 'Upscale video using realesrgan-
     end
 
     if test -n "$probe_target"; and test -f "$probe_target"
-        set -l width (video_resolution -w "$probe_target" 2>/dev/null)
-        set -l height (video_resolution -h "$probe_target" 2>/dev/null)
+        set width (video_resolution -w "$probe_target" 2>/dev/null)
+        set height (video_resolution -h "$probe_target" 2>/dev/null)
         if test -z "$width"; or test -z "$height"
             set width (ffprobe -v error -select_streams v:0 -show_entries stream=width -of csv=p=0 "$probe_target" 2>/dev/null)
             set height (ffprobe -v error -select_streams v:0 -show_entries stream=height -of csv=p=0 "$probe_target" 2>/dev/null)
@@ -111,51 +116,125 @@ function upscale_video_realesrgan --description 'Upscale video using realesrgan-
     end
 
     # Конфигурация разрешения
-    set -l scale_factor
-    set -l tile_size
-    set -l thread_configuration
+    set -l target_dim
     set -l ffmpeg_scale_filter
 
     switch $resolution
+        case 720p
+            set target_dim 1280
+            if test $is_horizontal = true
+                set ffmpeg_scale_filter -vf "scale=1280:-2"
+            else
+                set ffmpeg_scale_filter -vf "scale=-2:1280"
+            end
         case 1080p
-            set scale_factor 2
-            set tile_size 512
-            set thread_configuration "2:2:2"
+            set target_dim 1920
             if test $is_horizontal = true
                 set ffmpeg_scale_filter -vf "scale=1920:-2"
             else
                 set ffmpeg_scale_filter -vf "scale=-2:1920"
             end
         case 2k
-            set scale_factor 2
-            set tile_size 512
-            set thread_configuration "2:2:2"
+            set target_dim 2560
             if test $is_horizontal = true
                 set ffmpeg_scale_filter -vf "scale=2560:-2"
             else
                 set ffmpeg_scale_filter -vf "scale=-2:2560"
             end
         case 4k
-            set scale_factor 4
-            set tile_size 256
-            set thread_configuration "1:2:2"
+            set target_dim 3840
             if test $is_horizontal = true
                 set ffmpeg_scale_filter -vf "scale=3840:-2"
             else
                 set ffmpeg_scale_filter -vf "scale=-2:3840"
             end
         case 5k
-            set scale_factor 4
-            set tile_size 256
-            set thread_configuration "1:2:2"
+            set target_dim 5120
             if test $is_horizontal = true
                 set ffmpeg_scale_filter -vf "scale=5120:-2"
             else
                 set ffmpeg_scale_filter -vf "scale=-2:5120"
             end
         case '*'
-            echo "Ошибка: Неизвестное разрешение '$resolution'. Доступные разрешения: 1080p, 2k, 4k, 5k."
+            echo "Ошибка: Неизвестное разрешение '$resolution'. Доступные разрешения: 720p, 1080p, 2k, 4k, 5k."
             return 1
+    end
+
+    # Задаем параметры для нативного 4x-апскейла.
+    # Модели realesrgan-x4plus и realesrgan-x4plus-anime спроектированы исключительно под масштаб 4x.
+    set -l scale_factor 4
+    set -l tile_size 256
+    set -l thread_configuration "1:2:1"
+
+    # Принудительный override масштаба через флаг --2x / -2
+    if set -ql _flag_2x
+        set scale_factor 2
+        set thread_configuration "2:2:2"
+        echo "Принудительно установлен масштаб scale_factor: 2 (флаг --2x)"
+    end
+
+    if test -n "$width"; and test -n "$height"; and test $width -gt 0; and test $height -gt 0
+        set -l max_input_dim $width
+        if test $height -gt $width
+            set max_input_dim $height
+        end
+
+        # Вычисляем требуемый коэффициент масштабирования для информации
+        set -l req_ratio (math -s2 "$target_dim / $max_input_dim")
+
+        echo "Параметры апскейла:"
+        echo "  Исходный макс. размер: $max_input_dim"
+        echo "  Целевой макс. размер: $target_dim"
+        echo "  Необходимый масштаб: $req_ratio"
+        echo "  Выбранный scale_factor: $scale_factor"
+    else
+        echo "Предупреждение: Разрешение входящего файла не определено. Используем дефолтные параметры."
+    end
+
+    # Определяем GPU для Vulkan
+    # Без --gpu: авто-режим (realesrgan сам выбирает GPU)
+    # --gpu 0:  интерактивный выбор из списка
+    # --gpu N:  использовать GPU с номером N из списка
+    set -l gpu_args
+
+    if set -ql _flag_gpu
+        set -l gpu_names
+        if type -q vulkaninfo
+            for line in (vulkaninfo --summary 2>/dev/null | grep 'deviceName')
+                set -a gpu_names (string replace -r '^\s*deviceName\s*=\s*' '' $line)
+            end
+        end
+
+        if test (count $gpu_names) -eq 0
+            echo "Предупреждение: vulkaninfo недоступен, невозможно определить список GPU."
+            return 1
+        end
+
+        if test "$_flag_gpu" = 0
+            # Интерактивный выбор
+            echo "Доступные GPU:"
+            for i in (seq (count $gpu_names))
+                echo "  $i) $gpu_names[$i]"
+            end
+            read -P "Выберите GPU (1—"(count $gpu_names)"): " -l user_choice
+            if not string match -qr '^\d+$' "$user_choice"; or test "$user_choice" -lt 1; or test "$user_choice" -gt (count $gpu_names)
+                echo "Ошибка: Некорректный выбор."
+                return 1
+            end
+            set -l gpu_index (math "$user_choice - 1")
+            set gpu_args -g $gpu_index
+            echo "GPU для апскейла: $gpu_names[$user_choice]"
+        else
+            # Прямой выбор по номеру
+            set -l user_choice $_flag_gpu
+            if not string match -qr '^\d+$' "$user_choice"; or test "$user_choice" -lt 1; or test "$user_choice" -gt (count $gpu_names)
+                echo "Ошибка: Некорректный номер GPU '$user_choice'. Доступные: 1—"(count $gpu_names)"."
+                return 1
+            end
+            set -l gpu_index (math "$user_choice - 1")
+            set gpu_args -g $gpu_index
+            echo "GPU для апскейла: $gpu_names[$user_choice] (device $gpu_index)"
+        end
     end
 
     # Создаем временную директорию
@@ -250,7 +329,7 @@ function upscale_video_realesrgan --description 'Upscale video using realesrgan-
 
         # Запускаем апскейлер в фоне, логируя ошибки во временный файл
         set -l esrgan_log "$temporary_directory/realesrgan_stderr.log"
-        realesrgan-ncnn-vulkan -i $upscale_input_dir -o $frames_output_directory -n $model_name -s $scale_factor -t $tile_size -j $thread_configuration -f png 2>$esrgan_log >/dev/null &
+        realesrgan-ncnn-vulkan $gpu_args -i $upscale_input_dir -o $frames_output_directory -n $model_name -s $scale_factor -t $tile_size -j $thread_configuration -f png 2>$esrgan_log >/dev/null &
         set -l esrgan_pid $last_pid
 
         # Мониторим прогресс
@@ -281,7 +360,7 @@ function upscale_video_realesrgan --description 'Upscale video using realesrgan-
             if test -f $esrgan_log
                 echo "--- ЛОГ ОШИБОК РАБОТЫ АПСКЕЙЛЕРА ---"
                 cat $esrgan_log
-                echo "-------------------------------------"
+                echo -------------------------------------
             end
             return 1
         end
@@ -335,7 +414,7 @@ function upscale_video_realesrgan --description 'Upscale video using realesrgan-
 
         # Запускаем апскейлер в фоне, логируя ошибки во временный файл
         set -l esrgan_log "$temporary_directory/realesrgan_stderr.log"
-        realesrgan-ncnn-vulkan -i $frames_input_directory -o $frames_output_directory -n $model_name -s $scale_factor -t $tile_size -j $thread_configuration -f png 2>$esrgan_log >/dev/null &
+        realesrgan-ncnn-vulkan $gpu_args -i $frames_input_directory -o $frames_output_directory -n $model_name -s $scale_factor -t $tile_size -j $thread_configuration -f png 2>$esrgan_log >/dev/null &
         set -l esrgan_pid $last_pid
 
         # Мониторим прогресс, подсчитывая готовые кадры в папке frames_out
@@ -359,7 +438,7 @@ function upscale_video_realesrgan --description 'Upscale video using realesrgan-
             if test -f $esrgan_log
                 echo "--- ЛОГ ОШИБОК РАБОТЫ АПСКЕЙЛЕРА ---"
                 cat $esrgan_log
-                echo "-------------------------------------"
+                echo -------------------------------------
             end
             return 1
         end
