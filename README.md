@@ -44,8 +44,8 @@ After I sort the functions into subdirectories (categories), you also need to co
 >
 > This allows you to visually inspect differences and safely transfer entire files or merge specific parts of the code without blindly overwriting your existing configuration.
 
-## Категории
-Когда функций стало очень много, я решил их разбить по категориям. Для этого в каталоге `sorted` и подкаталогам-категориям расскиданы симлинки на функции. Для совместимости в fisher я решил не сортировать функции по подкаталогам внутри `functions` при помощи своего вспомогательного скрипта в `conf.d`.
+## Categories
+When the number of functions grew too large, I decided to organize them by categories. To achieve this, symbolic links to the functions are distributed within the `sorted` directory and its category subdirectories. For compatibility with Fisher, I decided against sorting functions into subdirectories directly inside the `functions` directory (which would otherwise require a custom initialization script in `conf.d`).
 
 
 
