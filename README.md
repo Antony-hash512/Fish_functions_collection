@@ -50,11 +50,13 @@ After I sort the functions into subdirectories (categories), you also need to co
 | :--- | :--- | :--- | :--- | :--- |
 | **add_subtitle_hint** | Add a subtitle hint overlay to a video (e.g., CC/Subtitle turn on prompt). | `<input> <output>` | `ffmpeg`, `magick`, `video_resolution` (function) | Russian |
 | **android_send** | Interactive file sending to Android via ADB. | Interactive | `adb` | Russian |
+| **apply_hardsubs** | Burn ASS subtitles into a video file using NVENC hardware acceleration (`hevc_nvenc`). | `[-s/--sub <file>] <video_file>` | `ffmpeg` | Russian |
 | **check_bin** | Check if a binary exists in Arch Linux repos or AUR. | `<package_name>` | `pacman`, `paru` | English |
 | **check_remote_ssh_logs** | Monitor failed SSH login attempts on a remote server. | N/A | `ssh` | Russian |
 | **concatenate_videos** | Seamlessly concatenate multiple video files using FFmpeg (without re-encoding). | `<input1> <input2> ... <output>` | `ffmpeg` | Russian |
 | **deluge_extract** | Extract `.torrent` files from Deluge state based on a download path. | `<search_path> [dest_dir]` | `deluge` | Mixed: Russian (Interface, source code comments) /  English (description) |
 | **deluge_extract2** | Advanced extraction of `.torrent` files by Path OR by Name. | `<search_term> [dest_dir]`, `--name` (`-n`) | `deluge` | Mixed: Russian (Interface, source code comments) /  English (description) |
+| **extract_original_audio** | Extract the original audio track from a video file without re-encoding. | `<input_video> [output_audio]` | `ffmpeg`, `ffprobe` | Russian |
 | **fedit** | Find and open a fish function using `fzf` and your preferred editor. | Interactive | `fzf`, `bat` (optional) | Mixed: English (main interface) /  Russian (source code comments, description and errors) |
 | **find_hardlinks** | Find all hardlinks pointing to a specific file. | `[-d /path] <file>` | N/A | Russian  |
 | **fish_greeting** | Customizes or suppresses the default Fish shell greeting. | N/A | N/A | Interface: N/A,  Description: English, Mixed source code comments: English /  Russian |
@@ -84,6 +86,7 @@ After I sort the functions into subdirectories (categories), you also need to co
 | **record_system_audio** | Interactively record system audio output. | Interactive | `ffmpeg`, `fzf` | Russian |
 | **reflinks-cp** | Copy with `reflink=always` (Cow) (wrapper for `cp`). | `[source] [dest]` | N/A | Russian comments, English description |
 | **rename_frames_sequentially** | Rename a sequence of frame files (e.g., PNGs) sequentially starting from 1 with no gaps. | N/A | N/A | Russian |
+| **replace_audio** | Replace the audio track in a video file with a new one, re-encoding the audio stream to AAC (320 kbps). | `<video_file> <audio_file> [output_file]` | `ffmpeg` | Russian |
 | **replace_audio_track** | Replace video audio track with fade-out effect. | `<video> <audio>` | `ffmpeg` | Russian |
 | **rm-if-empty** | Safely remove directory ONLY if it contains 0-byte files or empty directories. | `<target_dir>` | `find` | Russian comments, English description |
 | **rsync2nas_move** | Move files to NAS using `rsync` with `size-only` check. | `<source> <target>` | `rsync` | Russian |
@@ -97,6 +100,7 @@ After I sort the functions into subdirectories (categories), you also need to co
 | **say-ru-direct** | Speak Russian text from clipboard/args (Piper). | `[text]` | `piper` | Russian |
 | **say-stop** | Stop all current speech synthesis processes. | N/A | `speech-dispatcher` | English |
 | **separate_audio** | Separate audio into vocals and background music using `audio-separator`. | `<file> [extra_args]` | `uv` (`audio-separator` via `uvx`) | Russian |
+| **shift_subtitles** | Shift timings in SRT subtitle files by a specified amount of seconds. | `<file.srt> <seconds> [--nobkp]` | `uv` | Russian |
 | **show_qr** | Display a QR code directly in the terminal (ANSI UTF8). | `<text>` | `qrencode` | Russian code comments, English description |
 | **smart-mv** | "**Smart Move**": Safely move files handling recursion, duplicates, and name conflicts. | `file1 [file2...] <dest_dir>` | `rsync` | Russian |
 | **squash_manager** | Smartly manage SquashFS: create (optional encryption), mount, and umount. | `create [OPTIONS] <input> [output], mount <img/mnt>, umount <mnt>` | `squashfs-tools`, `cryptsetup` (for -e), `tar2sqfs` (for archives) | Mixed |
@@ -107,6 +111,7 @@ After I sort the functions into subdirectories (categories), you also need to co
 | **sudo-switch-alias** | Toggle the `sudo` alias between the system `sudo` and `sudo-rs`. | N/A | `sudo-rs` (optional) | Russian |
 | **test_ssh_speed** | Test SSH connection speed using `pv` (pipe viewer). | `<host>` | `pv`, `openssh` | Russian code comments, English description |
 | **toggle_night_mode** | Toggle system night mode (Redshift/etc.). | N/A | N/A | Russian |
+| **update-all** | Perform a full system and packages/toolchain update (Arch, AUR, Flatpak, Python/uv, Rust/Cargo, Go). | N/A | `paru`, `flatpak` (optional), `uv` (optional), `rustup` (optional), `cargo-install-update` (optional), `gup` (optional) | Mixed |
 | **update-grub** | Shortcut to update GRUB2 configuration (Ubuntu-style style command for Arch). | N/A | `grub` | Interface: N/A, Decription/source code comments:   Russian |
 | **update_all_git_repositories** | Update all git repositories in a directory. | `[path]`, `-q` | `git` | Russian |
 | **updates_rclone** | Check for updates to `rclone`. | N/A | `rclone` | English |
