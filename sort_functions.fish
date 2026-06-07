@@ -1,9 +1,10 @@
 #!/usr/bin/env fish
 
-# This script organizes fish functions into subdirectories under functions/
-# according to the requested structure.
+# This script organizes fish functions into subdirectories under sorted/
+# by creating symlinks to the flat repository of functions in functions/.
 
 set funcs_dir functions
+set sorted_dir sorted
 
 # Define list of files for each category
 set mapping \
@@ -90,22 +91,25 @@ for item in $mapping
     set -l file $parts[2]
     
     set -l src_file "$funcs_dir/$file"
-    set -l dest_dir "$funcs_dir/$category"
+    set -l dest_dir "$sorted_dir/$category"
     set -l dest_file "$dest_dir/$file"
     
-    # Check if the file exists in the root of functions directory
+    # Check if the source file exists in the functions directory
     if test -f "$src_file"
-        # Create directory if it does not exist
+        # Create category directory if it does not exist
         if not test -d "$dest_dir"
             mkdir -p "$dest_dir"
         end
         
-        # Move using git mv if tracked, otherwise standard mv
-        if git ls-files --error-unmatch "$src_file" >/dev/null 2>&1
-            git mv "$src_file" "$dest_file"
-        else
-            mv "$src_file" "$dest_file"
+        # Create relative symbolic link pointing to the file in functions/
+        ln -sf "../../$funcs_dir/$file" "$dest_file"
+        echo "Created symlink: $dest_file -> ../../$funcs_dir/$file"
+        
+        # Stage the symlink if in a git repository
+        if git rev-parse --is-inside-work-tree >/dev/null 2>&1
+            git add "$dest_file"
         end
-        echo "Moved $file to $category/"
+    else
+        echo "Warning: Source file $src_file not found"
     end
 end
