@@ -1,6 +1,6 @@
 function apply_hardsubs -d "Вшивает ASS-субтитры в видео через hevc_nvenc"
     # Парсим аргументы: флаг -s или --sub (ожидает значение), и флаг -h/--help
-    argparse 's/sub=' 'h/help' -- $argv
+    argparse 's/sub=' h/help -- $argv
     or return 1
 
     if set -q _flag_help; or test (count $argv) -eq 0
@@ -41,7 +41,7 @@ function apply_hardsubs -d "Вшивает ASS-субтитры в видео ч
 
     # Проверяем, заканчивается ли базовое имя на -watermarked
     if string match -q "*-watermarked" -- "$base_name"
-        set out_name (string replace -r '-watermarked$' '-hardsubbed' -- "$base_name")"$ext"
+        set out_name (string replace -r -- '-watermarked$' '-hardsubbed' "$base_name")"$ext"
     else
         set out_name "$base_name-hardsubbed$ext"
     end
