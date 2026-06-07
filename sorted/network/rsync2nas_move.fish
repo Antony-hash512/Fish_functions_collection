@@ -1,0 +1,1 @@
+../../functions/rsync2nas_move.fish

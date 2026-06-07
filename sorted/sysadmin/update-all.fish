@@ -1,0 +1,1 @@
+../../functions/update-all.fish

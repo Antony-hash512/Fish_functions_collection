@@ -1,0 +1,1 @@
+../../functions/whisper_transcribe.fish

@@ -1,0 +1,1 @@
+../../functions/pass.fish

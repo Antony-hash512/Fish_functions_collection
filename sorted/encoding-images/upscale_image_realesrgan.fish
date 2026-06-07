@@ -1,0 +1,1 @@
+../../functions/upscale_image_realesrgan.fish

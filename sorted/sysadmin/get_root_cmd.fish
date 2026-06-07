@@ -1,0 +1,1 @@
+../../functions/get_root_cmd.fish

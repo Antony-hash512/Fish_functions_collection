@@ -1,0 +1,1 @@
+../../functions/persistent_ssh.fish

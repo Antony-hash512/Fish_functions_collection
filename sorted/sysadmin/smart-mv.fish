@@ -1,0 +1,1 @@
+../../functions/smart-mv.fish

@@ -1,0 +1,1 @@
+../../functions/mount-remote-dir-by-rclone.fish

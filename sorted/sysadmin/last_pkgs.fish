@@ -1,0 +1,1 @@
+../../functions/last_pkgs.fish

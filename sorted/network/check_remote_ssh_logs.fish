@@ -1,0 +1,1 @@
+../../functions/check_remote_ssh_logs.fish

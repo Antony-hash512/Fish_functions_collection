@@ -1,0 +1,1 @@
+../../functions/update_all_git_repositories.fish

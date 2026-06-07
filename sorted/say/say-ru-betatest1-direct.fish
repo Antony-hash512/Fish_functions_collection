@@ -1,0 +1,1 @@
+../../functions/say-ru-betatest1-direct.fish

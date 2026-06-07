@@ -1,0 +1,1 @@
+../../functions/watermark_pro.fish

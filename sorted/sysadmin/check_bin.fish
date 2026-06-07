@@ -1,0 +1,1 @@
+../../functions/check_bin.fish

@@ -1,0 +1,1 @@
+../../functions/say-en-kokoro.fish

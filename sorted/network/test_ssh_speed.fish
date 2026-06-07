@@ -1,0 +1,1 @@
+../../functions/test_ssh_speed.fish

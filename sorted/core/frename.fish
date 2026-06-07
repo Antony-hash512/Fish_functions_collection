@@ -1,0 +1,1 @@
+../../functions/frename.fish

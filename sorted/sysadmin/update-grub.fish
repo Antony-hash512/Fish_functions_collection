@@ -1,0 +1,1 @@
+../../functions/update-grub.fish

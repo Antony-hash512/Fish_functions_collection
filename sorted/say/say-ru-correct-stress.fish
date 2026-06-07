@@ -1,0 +1,1 @@
+../../functions/say-ru-correct-stress.fish

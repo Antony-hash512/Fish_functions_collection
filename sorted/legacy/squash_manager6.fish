@@ -1,0 +1,1 @@
+../../functions/squash_manager6.fish

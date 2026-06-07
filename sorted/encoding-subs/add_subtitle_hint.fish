@@ -1,0 +1,1 @@
+../../functions/add_subtitle_hint.fish

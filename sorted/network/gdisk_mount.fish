@@ -1,0 +1,1 @@
+../../functions/gdisk_mount.fish

@@ -1,0 +1,1 @@
+../../functions/nat_off4nas_iptables.fish

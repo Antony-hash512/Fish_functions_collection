@@ -1,0 +1,1 @@
+../../functions/launch_cosyvoice_server.fish

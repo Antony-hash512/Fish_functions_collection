@@ -1,0 +1,1 @@
+../../functions/say-ru-direct.fish

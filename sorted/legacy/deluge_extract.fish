@@ -1,0 +1,1 @@
+../../functions/deluge_extract.fish

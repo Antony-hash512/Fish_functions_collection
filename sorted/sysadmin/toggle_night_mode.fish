@@ -1,0 +1,1 @@
+../../functions/toggle_night_mode.fish

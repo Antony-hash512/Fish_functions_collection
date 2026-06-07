@@ -1,0 +1,1 @@
+../../functions/fish_prompt.fish

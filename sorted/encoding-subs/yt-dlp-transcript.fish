@@ -1,0 +1,1 @@
+../../functions/yt-dlp-transcript.fish

@@ -1,0 +1,1 @@
+../../functions/git_check_updates.fish

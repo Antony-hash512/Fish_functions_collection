@@ -1,0 +1,1 @@
+../../functions/paru_clean.fish
