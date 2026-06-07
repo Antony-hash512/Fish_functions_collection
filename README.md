@@ -45,7 +45,7 @@ After I sort the functions into subdirectories (categories), you also need to co
 > This allows you to visually inspect differences and safely transfer entire files or merge specific parts of the code without blindly overwriting your existing configuration.
 
 ## Категории
- Благодаря скрипту [conf.d/antonyhash512-subdirs-init.fish](conf.d/antonyhash512-subdirs-init.fish) функции разбиты на категории, путём раскидывания их по каталогам, чтобы было проще ориентироваться в них. Для миграции на данную разбивку (если функции, до того как я перешёл на данную разбивку, были установлены через fisher или ранее скопрованны в `~/.config/fish/functions/`) нужно скопировать скрипт [sort_functions.fish](sort_functions.fish) в `~/.config/fish/` из запустить его оттуда, после чего можно будет спокойно сравнивать `~/.config/fish/` и корень репозитория meld'ом или обновлять fisher'ом.
+Когда функций стало очень много, я решил их разбить по категориям. Для этого в каталоге `sorted` и подкаталогам-категориям расскиданы симлинки на функции. Для совместимости в fisher я решил не сортировать функции по подкаталогам внутри `functions` при помощи своего вспомогательного скрипта в `conf.d`.
 
 
 
