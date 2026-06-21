@@ -160,6 +160,9 @@ function upscale_video_realesrgan --description 'Upscale video using realesrgan-
             return 1
     end
 
+    # Приплюсовываем динамический шум к уже сформированному фильтру масштабирования
+    set ffmpeg_scale_filter[2] "$ffmpeg_scale_filter[2],noise=alls=3:allf=t+u"
+
     # Задаем параметры для нативного 4x-апскейла.
     # Модели realesrgan-x4plus и realesrgan-x4plus-anime спроектированы исключительно под масштаб 4x.
     set -l scale_factor 4

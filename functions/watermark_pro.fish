@@ -7,6 +7,8 @@ function watermark_pro --description "Наложение вотермарки н
     set options $options (fish_opt -l border-color --required-val)
     set options $options (fish_opt -l border-size --required-val)
     set options $options (fish_opt -l font --required-val)
+    set options $options (fish_opt -s h -l hardsub)
+    set options $options (fish_opt -l hardsub-filename --required-val)
 
     argparse $options -- $argv
     or return 1
@@ -18,6 +20,25 @@ function watermark_pro --description "Наложение вотермарки н
     end
 
     set -l input_file $_flag_input[1]
+
+    if set -q _flag_hardsub_filename[1]; and not set -q _flag_hardsub
+        echo (set_color red)"Ошибка: Флаг --hardsub-filename может использоваться только вместе с флагом -h или --hardsub."(set_color normal)
+        return 1
+    end
+
+    set -l sub_in ""
+    if set -q _flag_hardsub
+        if set -q _flag_hardsub_filename[1]
+            set sub_in $_flag_hardsub_filename[1]
+        else
+            set sub_in (string replace -r '\.[^.]+$' '.ass' -- "$input_file")
+        end
+
+        if not test -f "$sub_in"
+            echo (set_color red)"❌ Ошибка: Файл субтитров '$sub_in' не найден."(set_color normal)
+            return 1
+        end
+    end
 
     if not set -q _flag_text[1]
         set -l _flag_text[1] "@My_Channel"
@@ -62,14 +83,30 @@ function watermark_pro --description "Наложение вотермарки н
     end
 
     set -l filename (basename "$input_file" | sed 's/\.[^.]*$//')
-    set -l output_file "$filename-watermarked.mp4"
+    set -l ext (string match -r '\.[^.]+$' -- "$input_file")
+    if test -z "$ext"
+        set ext ".mp4"
+    end
+    set -l output_file ""
+    if set -q _flag_hardsub
+        set output_file "$filename-hardsubbed$ext"
+    else
+        set output_file "$filename-watermarked$ext"
+    end
     set -l timestamp (date +%H%M%S)
 
     echo (set_color cyan)"====================="(set_color normal)
-    echo (set_color -o)"Начинаем наложение вотермарка."(set_color normal)
-    echo (set_color green)"Входной файл: "(set_color normal)"$input_file"
+    if set -q _flag_hardsub
+        echo (set_color -o)"Начинаем наложение вотермарка и хардсаба."(set_color normal)
+    else
+        echo (set_color -o)"Начинаем наложение вотермарка."(set_color normal)
+    end
+    echo (set_color green)"Входной файл:     "(set_color normal)"$input_file"
     echo (set_color green)"Текст вотермарка: "(set_color normal)"$watermark_text"
-    echo (set_color green)"Промежуточный файл: "(set_color normal)"$output_file"
+    if set -q _flag_hardsub
+        echo (set_color green)"Файл субтитров:   "(set_color normal)"$sub_in"
+    end
+    echo (set_color green)"Выходной файл:    "(set_color normal)"$output_file"
     echo (set_color cyan)"====================="(set_color normal)
     echo "Пожалуйста, подождите, процесс может занять время..."
 
@@ -117,6 +154,10 @@ function watermark_pro --description "Наложение вотермарки н
         set vf_chain "drawtext=$text_base:fontcolor=$font_color:borderw=$border_width:bordercolor=$border_color"
     end
 
+    if set -q _flag_hardsub
+        set vf_chain "$vf_chain,ass='$sub_in'"
+    end
+
     # КОМАНДА FFMPEG С ПОЯСНЕНИЯМИ:
     # 1. -vf: Включаем видеофильтр.
     # 3. ПАРАМЕТРЫ РЕКОДИНГА:
@@ -124,12 +165,12 @@ function watermark_pro --description "Наложение вотермарки н
     #    - -cq $cq: Качество (Constant Quality для nvenc, аналог CRF).
     #    - -pix_fmt yuv420p: Стандартная цветовая субдискретизация.
     #    - -g 30: Интервал ключевых кадров (GOP = 1 сек при 30fps).
-    #    - -c:a aac -b:a 160k: Пережимаем аудио в качественный AAC 160k.
+    #    - -c:a aac -b:a 384k -ar 48000: Качественный стерео AAC 384k для YouTube.
 
     ffmpeg -i "$input_file" \
         -vf "$vf_chain" \
         -c:v hevc_nvenc -cq $cq -pix_fmt yuv420p -g 30 \
-        -c:a aac -b:a 160k \
+        -c:a aac -b:a 384k -ar 48000 \
         "$output_file"
 
     if test $status -eq 0

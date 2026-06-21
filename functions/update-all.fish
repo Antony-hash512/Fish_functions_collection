@@ -51,6 +51,15 @@ function update-all --description "Full update: Arch, AUR, Flatpak, uv, Rust, Go
         echo "Утилита gup не найдена. Пропуск."
     end
 
+    set_color blue
+    echo "==> Обновление Grok..."
+    set_color normal
+    if command -v grok > /dev/null
+        grok update
+    else
+        echo "Грок не установлен, если хотете установить: curl -fsSL https://x.ai/cli/install.sh | bash"
+    end
+
     set_color green
     echo "==> Все обновления успешно завершены!"
     set_color normal
