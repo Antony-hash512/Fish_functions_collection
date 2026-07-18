@@ -1,4 +1,5 @@
 function update-all --description "Full update: Arch, AUR, Flatpak, uv, Rust, Go"
+    sudo pacman --needed keychain
     keychain --eval --quiet id_ed25519 | source
     set_color blue
     echo "==> Обновление системы (Arch + AUR)..."
