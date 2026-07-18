@@ -10,7 +10,7 @@ function update-all --description "Full update: Arch, AUR, Flatpak, uv, Rust, Go
     set_color normal
     if command -v flatpak > /dev/null
         # Можно добавить флаг -y (flatpak update -y), если не хочешь каждый раз жать 'y'
-        flatpak update 
+        flatpak -y update 
     else
         echo "Flatpak не установлен. Пропуск."
     end
@@ -50,6 +50,15 @@ function update-all --description "Full update: Arch, AUR, Flatpak, uv, Rust, Go
         gup update
     else
         echo "Утилита gup не найдена. Пропуск."
+    end
+
+    set_color blue
+    echo "==> Обновление плагинов NeoVim через Packer..."
+    set_color normal
+    if command -v nvim > /dev/null
+        nvim --headless -c 'autocmd User PackerComplete quitall' -c 'PackerSync'
+    else
+        echo "NeoVim не установлен"
     end
 
     set_color blue
